@@ -3,10 +3,14 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Field from "$lib/components/ui/field/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import * as InputGroup from "$lib/components/ui/input-group/index.js";
   import type { HTMLAttributes } from "svelte/elements";
+  import { EyeIcon, EyeOffIcon } from "@lucide/svelte";
 
   let { class: className, ...restProps }: HTMLAttributes<HTMLFormElement> =
     $props();
+
+  let showPassword = $state(false);
 </script>
 
 <form class={cn("flex flex-col gap-6", className)} {...restProps}>
@@ -27,8 +31,31 @@
     </Field.Field>
     <Field.Field>
       <Field.Label for="password">Password</Field.Label>
-      <Input id="password" type="password" required />
-      <Field.Description>Must be at least 8 characters long.</Field.Description>
+      <InputGroup.Root>
+        <InputGroup.Input
+          id="password"
+          type={showPassword ? "text" : "password"}
+          required
+        />
+        <InputGroup.Addon align="inline-end" class="rounded-r-md">
+          <Button
+            variant="ghost"
+            size="icon"
+            onclick={() => (showPassword = !showPassword)}
+            class="	hover:bg-transparent"
+          >
+            {#if !showPassword}
+              <EyeIcon />
+            {:else}
+              <EyeOffIcon />
+            {/if}
+            <span class="sr-only">Toggle password visibility</span>
+            <span class="sr-only">
+              {showPassword ? "Hide password" : "Show password"}
+            </span>
+          </Button>
+        </InputGroup.Addon>
+      </InputGroup.Root>
     </Field.Field>
     <Field.Field>
       <Button type="submit">Create Account</Button>
