@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { superForm } from "sveltekit-superforms";
+  import { superForm, defaults } from "sveltekit-superforms";
   import { zod4 } from "sveltekit-superforms/adapters";
   import { loginSchema } from "$lib/validation";
   import {
@@ -15,30 +15,52 @@
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { cn } from "$lib/utils.js";
   import type { HTMLAttributes } from "svelte/elements";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import { z } from "zod";
+  import { authClient } from "$lib/auth-client";
+  import { goto } from "$app/navigation";
 
-  let {
-    form,
-    class: className,
-    ...restProps
-  }: HTMLAttributes<HTMLFormElement> & {
-    form: SuperValidated<z.infer<typeof loginSchema>>;
-  } = $props();
+  let { class: className, ...restProps }: HTMLAttributes<HTMLFormElement> =
+    $props();
+
+  const data = defaults(zod4(loginSchema));
 
   const {
     form: formData,
     enhance,
     submitting,
     errors,
-  } = superForm(form, {
+  } = superForm(data, {
+    SPA: true,
     validators: zod4(loginSchema),
+    async onUpdate({ form }) {
+      if (!form.valid) return;
+
+      try {
+        const response = await authClient.signIn.email({
+          email: form.data.email as string,
+          password: form.data.password as string,
+        });
+
+        if (response.error) {
+          form.errors._errors = [
+            response.error.message ||
+              "Invalid email or password. Please try again.",
+          ];
+        } else if (response.data) {
+          await goto("/");
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Invalid email or password. Please try again.";
+        form.errors._errors = [errorMessage];
+      }
+    },
   });
 </script>
 
 <form
   method="POST"
-  action="?/default"
   use:enhance
   class={cn("flex flex-col gap-6", className)}
   {...restProps}

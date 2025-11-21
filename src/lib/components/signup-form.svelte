@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { superForm } from "sveltekit-superforms";
+  import { superForm, defaults } from "sveltekit-superforms";
   import { zod4 } from "sveltekit-superforms/adapters";
   import { signupSchema } from "$lib/validation";
   import { cn } from "$lib/utils.js";
@@ -10,24 +10,48 @@
   import { Spinner } from "$lib/components/ui/spinner/index.js";
   import type { HTMLAttributes } from "svelte/elements";
   import { EyeIcon, EyeOffIcon } from "@lucide/svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
-  import { z } from "zod";
+  import { authClient } from "$lib/auth-client";
+  import { goto } from "$app/navigation";
 
-  let {
-    form,
-    class: className,
-    ...restProps
-  }: HTMLAttributes<HTMLFormElement> & {
-    form: SuperValidated<z.infer<typeof signupSchema>>;
-  } = $props();
+  let { class: className, ...restProps }: HTMLAttributes<HTMLFormElement> =
+    $props();
+
+  const data = defaults(zod4(signupSchema));
 
   const {
     form: formData,
     enhance,
     submitting,
     errors,
-  } = superForm(form, {
+  } = superForm(data, {
+    SPA: true,
     validators: zod4(signupSchema),
+    async onUpdate({ form }) {
+      if (!form.valid) return;
+
+      try {
+        const response = await authClient.signUp.email({
+          email: form.data.email as string,
+          password: form.data.password as string,
+          name: form.data.name as string,
+        });
+
+        if (response.error) {
+          form.errors._errors = [
+            response.error.message ||
+              "An error occurred during signup. Please try again.",
+          ];
+        } else if (response.data) {
+          await goto("/");
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An error occurred during signup. Please try again.";
+        form.errors._errors = [errorMessage];
+      }
+    },
   });
 
   let showPassword = $state(false);
@@ -35,7 +59,6 @@
 
 <form
   method="POST"
-  action="?/default"
   use:enhance
   class={cn("flex flex-col gap-6", className)}
   {...restProps}
