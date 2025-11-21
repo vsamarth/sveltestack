@@ -1,9 +1,4 @@
-import {
-  pgTable,
-  timestamp,
-  boolean,
-  text,
-} from "drizzle-orm/pg-core";
+import { pgTable, timestamp, boolean, text } from "drizzle-orm/pg-core";
 import { ulid } from "ulid";
 
 // Better Auth tables
