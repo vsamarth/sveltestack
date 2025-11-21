@@ -1,28 +1,46 @@
 <script lang="ts">
+  import { superForm } from "sveltekit-superforms";
+  import { zod4 } from "sveltekit-superforms/adapters";
+  import { loginSchema } from "$lib/validation";
   import {
     FieldGroup,
     Field,
     FieldLabel,
     FieldDescription,
     FieldSeparator,
+    FieldError,
   } from "$lib/components/ui/field/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { cn, type WithElementRef } from "$lib/utils.js";
-  import type { HTMLFormAttributes } from "svelte/elements";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import { cn } from "$lib/utils.js";
+  import type { HTMLAttributes } from "svelte/elements";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import { z } from "zod";
 
   let {
-    ref = $bindable(null),
+    form,
     class: className,
     ...restProps
-  }: WithElementRef<HTMLFormAttributes> = $props();
+  }: HTMLAttributes<HTMLFormElement> & {
+    form: SuperValidated<z.infer<typeof loginSchema>>;
+  } = $props();
 
-  const id = $props.id();
+  const {
+    form: formData,
+    enhance,
+    submitting,
+    errors,
+  } = superForm(form, {
+    validators: zod4(loginSchema),
+  });
 </script>
 
 <form
+  method="POST"
+  action="?/default"
+  use:enhance
   class={cn("flex flex-col gap-6", className)}
-  bind:this={ref}
   {...restProps}
 >
   <FieldGroup>
@@ -30,20 +48,48 @@
       <h1 class="text-2xl font-bold">Sign in to your account</h1>
     </div>
     <Field>
-      <FieldLabel for="email-{id}">Email</FieldLabel>
-      <Input id="email-{id}" type="email" required />
+      <FieldLabel for="email">Email</FieldLabel>
+      <Input
+        id="email"
+        name="email"
+        type="email"
+        bind:value={$formData.email}
+        aria-invalid={$errors.email ? true : undefined}
+      />
+      {#if $errors.email}
+        <FieldError errors={$errors.email} />
+      {/if}
     </Field>
     <Field>
       <div class="flex items-center">
-        <FieldLabel for="password-{id}">Password</FieldLabel>
+        <FieldLabel for="password">Password</FieldLabel>
         <a href="##" class="ml-auto text-sm underline-offset-4 hover:underline">
           Forgot your password?
         </a>
       </div>
-      <Input id="password-{id}" type="password" required />
+      <Input
+        id="password"
+        name="password"
+        type="password"
+        bind:value={$formData.password}
+        aria-invalid={$errors.password ? true : undefined}
+      />
+      {#if $errors.password}
+        <FieldError errors={$errors.password} />
+      {/if}
     </Field>
+    {#if $errors._errors}
+      <Field>
+        <FieldError errors={$errors._errors} />
+      </Field>
+    {/if}
     <Field>
-      <Button type="submit">Sign in</Button>
+      <Button type="submit" disabled={$submitting}>
+        {#if $submitting}
+          <Spinner />
+        {/if}
+        Sign in
+      </Button>
     </Field>
     <FieldSeparator>Or continue with</FieldSeparator>
     <Field>

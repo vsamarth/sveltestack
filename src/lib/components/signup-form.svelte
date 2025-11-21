@@ -1,19 +1,45 @@
 <script lang="ts">
+  import { superForm } from "sveltekit-superforms";
+  import { zod4 } from "sveltekit-superforms/adapters";
+  import { signupSchema } from "$lib/validation";
   import { cn } from "$lib/utils.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Field from "$lib/components/ui/field/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as InputGroup from "$lib/components/ui/input-group/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import type { HTMLAttributes } from "svelte/elements";
   import { EyeIcon, EyeOffIcon } from "@lucide/svelte";
+  import type { SuperValidated } from "sveltekit-superforms";
+  import { z } from "zod";
 
-  let { class: className, ...restProps }: HTMLAttributes<HTMLFormElement> =
-    $props();
+  let {
+    form,
+    class: className,
+    ...restProps
+  }: HTMLAttributes<HTMLFormElement> & {
+    form: SuperValidated<z.infer<typeof signupSchema>>;
+  } = $props();
+
+  const {
+    form: formData,
+    enhance,
+    submitting,
+    errors,
+  } = superForm(form, {
+    validators: zod4(signupSchema),
+  });
 
   let showPassword = $state(false);
 </script>
 
-<form class={cn("flex flex-col gap-6", className)} {...restProps}>
+<form
+  method="POST"
+  action="?/default"
+  use:enhance
+  class={cn("flex flex-col gap-6", className)}
+  {...restProps}
+>
   <Field.Group>
     <div class="flex flex-col items-center gap-1 text-center">
       <h1 class="text-2xl font-bold">Create your account</h1>
@@ -23,26 +49,47 @@
     </div>
     <Field.Field>
       <Field.Label for="name">Full Name</Field.Label>
-      <Input id="name" type="text" required />
+      <Input
+        id="name"
+        name="name"
+        type="text"
+        bind:value={$formData.name}
+        aria-invalid={$errors.name ? true : undefined}
+      />
+      {#if $errors.name}
+        <Field.Error errors={$errors.name} />
+      {/if}
     </Field.Field>
     <Field.Field>
       <Field.Label for="email">Email</Field.Label>
-      <Input id="email" type="email" required />
+      <Input
+        id="email"
+        name="email"
+        type="email"
+        bind:value={$formData.email}
+        aria-invalid={$errors.email ? true : undefined}
+      />
+      {#if $errors.email}
+        <Field.Error errors={$errors.email} />
+      {/if}
     </Field.Field>
     <Field.Field>
       <Field.Label for="password">Password</Field.Label>
       <InputGroup.Root>
         <InputGroup.Input
           id="password"
+          name="password"
           type={showPassword ? "text" : "password"}
-          required
+          bind:value={$formData.password}
+          aria-invalid={$errors.password ? true : undefined}
         />
         <InputGroup.Addon align="inline-end" class="rounded-r-md">
           <Button
             variant="ghost"
             size="icon"
+            type="button"
             onclick={() => (showPassword = !showPassword)}
-            class="	hover:bg-transparent"
+            class="hover:bg-transparent"
           >
             {#if !showPassword}
               <EyeIcon />
@@ -56,9 +103,22 @@
           </Button>
         </InputGroup.Addon>
       </InputGroup.Root>
+      {#if $errors.password}
+        <Field.Error errors={$errors.password} />
+      {/if}
     </Field.Field>
+    {#if $errors._errors}
+      <Field.Field>
+        <Field.Error errors={$errors._errors} />
+      </Field.Field>
+    {/if}
     <Field.Field>
-      <Button type="submit">Create Account</Button>
+      <Button type="submit" disabled={$submitting}>
+        {#if $submitting}
+          <Spinner />
+        {/if}
+        Create Account
+      </Button>
     </Field.Field>
     <Field.Separator>Or continue with</Field.Separator>
     <Field.Field>
