@@ -16,19 +16,24 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ error: "Filename is required" }, { status: 400 });
     }
 
+    console.log("Generating presigned URL for:", filename);
+
     // Generate unique key
     const fileExtension = filename.split(".").pop();
     const key = `${ulid()}.${fileExtension}`;
+    const finalContentType = contentType || "application/octet-stream";
 
     // Generate presigned URL (valid for 1 hour)
-    const url = await getPresignedUploadUrl(key, contentType, 3600);
+    const url = await getPresignedUploadUrl(key, finalContentType, 3600);
+
+    console.log("Presigned URL generated:", url);
 
     return json({
       url,
       key,
       method: "PUT",
       headers: {
-        "Content-Type": contentType || "application/octet-stream",
+        "Content-Type": finalContentType,
       },
     });
   } catch (error) {

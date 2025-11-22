@@ -14,6 +14,7 @@ const s3Client = new S3Client({
     accessKeyId: env.STORAGE_ACCESS_KEY,
     secretAccessKey: env.STORAGE_SECRET_KEY,
   },
+  forcePathStyle: true,
 });
 
 export async function initBucket() {

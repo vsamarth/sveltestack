@@ -38,6 +38,7 @@
 
       const data = await response.json();
 
+      console.log("Upload parameters received for file:", file.name, data);
       return {
         method: data.method,
         url: data.url,
