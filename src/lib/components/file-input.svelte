@@ -1,12 +1,198 @@
 <script lang="ts">
-  import { useFileInput } from "@uppy/svelte";
-  import { Input } from "./ui/input";
-  import { Button } from "./ui/button";
+  import { useDropzone } from "@uppy/svelte";
+  import * as Card from "$lib/components/ui/card";
+  import { Button } from "$lib/components/ui/button";
+  import { Spinner } from "$lib/components/ui/spinner";
+  import {
+    CloudIcon,
+    CheckCircle2Icon,
+    XCircleIcon,
+    FileIcon,
+    XIcon,
+    UploadIcon,
+  } from "@lucide/svelte";
+  import { emptyMediaVariants } from "./ui/empty/empty-media.svelte";
+  import type { UppyFile, Meta } from "@uppy/core";
 
-  const { getButtonProps, getInputProps } = useFileInput({
-    multiple: true,
+  type FileWithProgress = UppyFile<Meta, Record<string, never>> & {
+    progress?: {
+      percentage: number;
+      bytesUploaded: number;
+      bytesTotal: number;
+    };
+  };
+
+  interface Props {
+    files: FileWithProgress[];
+    onRemove: (fileId: string) => void;
+    onStartUpload: () => void;
+    onCancelAll: () => void;
+    isUploading: boolean;
+  }
+
+  let { files, onRemove, onStartUpload, onCancelAll, isUploading }: Props =
+    $props();
+
+  let isDragging = $state(false);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    noClick: true,
+    onDragOver: () => {
+      isDragging = true;
+    },
+    onDragLeave: () => {
+      isDragging = false;
+    },
+    onDrop: () => {
+      isDragging = false;
+    },
   });
+
+  function formatFileSize(bytes: number): string {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  }
+
+  function getFileIcon(file: FileWithProgress) {
+    const error = file.error;
+    const isComplete = file.progress?.percentage === 100;
+
+    if (error) return XCircleIcon;
+    if (isComplete) return CheckCircle2Icon;
+    return FileIcon;
+  }
+
+  function getIconColor(file: FileWithProgress) {
+    const error = file.error;
+    const isComplete = file.progress?.percentage === 100;
+
+    if (error) return "text-destructive";
+    if (isComplete) return "text-green-600";
+    return "text-muted-foreground";
+  }
+
+  const hasFiles = $derived(files.length > 0);
+  const gridCols = $derived(files.length === 1 ? "grid-cols-1" : "grid-cols-2");
 </script>
 
-<Input {...getInputProps()} class="sr-only" />
-<Button {...getButtonProps()} variant="outline" size="sm">Upload files</Button>
+{#snippet emptyState()}
+  <Card.Content>
+    <div class="flex flex-col items-center gap-2 text-center">
+      <div class={emptyMediaVariants({ variant: "icon" })}>
+        <CloudIcon />
+      </div>
+      <div class="text-lg font-medium tracking-tight">Nothing here yet</div>
+      <div class="text-muted-foreground text-sm/relaxed">
+        Start by uploading your files to this workspace.
+      </div>
+    </div>
+  </Card.Content>
+{/snippet}
+
+{#snippet fileCard(file: FileWithProgress)}
+  {@const Icon = getFileIcon(file)}
+  {@const progress = file.progress?.percentage ?? 0}
+  {@const isUploadingFile = progress > 0 && progress < 100}
+
+  <div
+    class="flex items-center gap-3 p-3 rounded-lg border bg-card transition-colors"
+  >
+    <div class={getIconColor(file)}>
+      {#if isUploadingFile}
+        <Spinner class="size-5" />
+      {:else}
+        <Icon class="size-5" />
+      {/if}
+    </div>
+
+    <div class="flex-1 min-w-0 space-y-1.5">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="font-medium text-sm truncate">{file.name}</p>
+          <p class="text-xs text-muted-foreground">
+            {formatFileSize(file.size ?? 0)}
+            {#if file.progress}
+              · {progress.toFixed(0)}%
+            {/if}
+          </p>
+        </div>
+
+        {#if !isUploadingFile && progress !== 100}
+          <Button
+            size="icon"
+            variant="ghost"
+            class="size-6 shrink-0"
+            onclick={() => onRemove(file.id)}
+          >
+            <XIcon class="size-4" />
+          </Button>
+        {/if}
+      </div>
+
+      {#if file.error}
+        <p class="text-xs text-destructive">
+          {file.error}
+        </p>
+      {:else if file.progress}
+        <div class="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
+          <div
+            class="bg-primary h-full transition-all duration-300 ease-out"
+            style="width: {progress}%"
+          ></div>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/snippet}
+
+<Card.Root
+  class="border-dashed border-2 transition-colors shadow-none w-full max-w-lg {isDragging
+    ? 'border-primary/20 bg-muted/5'
+    : hasFiles
+      ? 'border-transparent'
+      : 'border-transparent'} {hasFiles ? 'p-6' : 'p-12'}"
+  {...getRootProps()}
+>
+  <input {...getInputProps()} class="hidden sr-only" />
+
+  {#if hasFiles}
+    <Card.Content class="grid {gridCols} gap-3">
+      {#each files as file (file.id)}
+        {@render fileCard(file)}
+      {/each}
+    </Card.Content>
+
+    <div
+      class="sticky bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 p-4"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-sm text-muted-foreground">
+          {files.length}
+          {files.length === 1 ? "file" : "files"} ready
+        </div>
+        <div class="flex gap-2">
+          {#if isUploading}
+            <Button variant="outline" size="sm" onclick={onCancelAll}>
+              Cancel
+            </Button>
+          {/if}
+          <Button size="sm" onclick={onStartUpload} disabled={isUploading}>
+            {#if isUploading}
+              <Spinner class="size-4" />
+              Uploading...
+            {:else}
+              <UploadIcon class="size-4" />
+              Upload {files.length}
+              {files.length === 1 ? "file" : "files"}
+            {/if}
+          </Button>
+        </div>
+      </div>
+    </div>
+  {:else}
+    {@render emptyState()}
+  {/if}
+</Card.Root>
