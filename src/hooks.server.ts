@@ -4,14 +4,17 @@ import { building } from "$app/environment";
 import type { Handle } from "@sveltejs/kit";
 
 export const handle: Handle = async ({ event, resolve }) => {
-  // Fetch current session from Better Auth
   const session = await auth.api.getSession({
     headers: event.request.headers,
   });
-  // Make session and user available on server
   if (session) {
     event.locals.session = session.session;
     event.locals.user = session.user;
+  }
+  // If the user is not authenticated, redirect dashboard requests to login
+  const { pathname } = event.url;
+  if (pathname.startsWith("/dashboard") && !event.locals.user) {
+    return Response.redirect(new URL("/login", event.url).toString(), 303);
   }
   return svelteKitHandler({ event, resolve, auth, building });
 };

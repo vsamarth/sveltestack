@@ -29,6 +29,8 @@ async function seedDatabase() {
   await seed(db, {
     user: schema.user,
     account: schema.account,
+    workspace: schema.workspace,
+    userPreferences: schema.userPreferences,
   }).refine((f) => ({
     user: {
       count: 10,
@@ -64,6 +66,16 @@ async function seedDatabase() {
         password: f.valuesFromArray({ values: [demoPassword] }),
       },
     },
+    workspace: {
+      count: 10,
+      columns: {
+        id: f.default({ defaultValue: undefined }),
+        name: f.valuesFromArray({ values: ["Personal"] }),
+        ownerId: f.valuesFromArray({ values: userIds, isUnique: true }),
+        createdAt: f.default({ defaultValue: undefined }),
+        updatedAt: f.default({ defaultValue: undefined }),
+      },
+    },
   }));
 
   console.log("✅ Database seeded successfully!");
@@ -79,6 +91,7 @@ async function resetDatabase() {
     verification: schema.verification,
     workspace: schema.workspace,
     file: schema.file,
+    userPreferences: schema.userPreferences,
   });
 
   console.log("✅ Database reset successfully!");
