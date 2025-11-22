@@ -52,7 +52,7 @@ async function seedDatabase() {
         updatedAt: f.default({ defaultValue: undefined }),
         accountId: f.string({ isUnique: true }),
         providerId: f.valuesFromArray({
-          values: ['credential'],
+          values: ["credential"],
         }),
         userId: f.valuesFromArray({ values: userIds, isUnique: true }),
         accessToken: f.default({ defaultValue: undefined }),

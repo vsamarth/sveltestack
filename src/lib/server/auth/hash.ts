@@ -7,4 +7,3 @@ export async function hash(password: string) {
 export async function verify(hash: string, password: string) {
   return await argonVerify(hash, password);
 }
-
