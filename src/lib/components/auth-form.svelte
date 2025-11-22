@@ -16,7 +16,6 @@
   import type { HTMLAttributes } from "svelte/elements";
   import { EyeIcon, EyeOffIcon } from "@lucide/svelte";
   import { authClient, getErrorMessage } from "$lib/auth-client";
-  import { goto } from "$app/navigation";
   import * as Form from "$lib/components/ui/form";
 
   interface Props extends HTMLAttributes<HTMLFormElement> {
@@ -46,18 +45,17 @@
           if (error)
             setError(form, "password", getErrorMessage(error.code ?? ""));
         } else {
-          const { data: responseData, error } = await authClient.signUp.email({
+          const { error } = await authClient.signUp.email({
             email: form.data.email as string,
             password: form.data.password as string,
             name: (form.data as { name?: string }).name as string,
+            callbackURL: "/",
           });
           if (error) {
             setError(form, "password", getErrorMessage(error.code ?? ""));
-          } else if (responseData) {
-            await goto("/");
           }
         }
-      } catch (error) {
+      } catch {
         setError(form, "password", getErrorMessage());
       }
     },
@@ -141,14 +139,12 @@
 {/snippet}
 
 {#snippet nameField()}
-  <Form.Field {form} name={"name" as any}>
+  <Form.Field {form} name={"name" as never}>
     <Form.Control>
       {#snippet children({ props })}
         <Form.Label>Full Name</Form.Label>
-        <Input
-          {...props}
-          bind:value={$formData as unknown as { name: string }).name}
-        />
+        <!-- prettier-ignore -->
+        <Input {...props} bind:value={($formData as { name?: string }).name} />
       {/snippet}
     </Form.Control>
     <Form.FieldErrors>
