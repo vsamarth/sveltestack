@@ -6,11 +6,13 @@ import { getRequestEvent } from "$app/server";
 import { hash, verify } from "./hash";
 import { createAuthMiddleware } from "better-auth/api";
 import { createDefaultWorkspace } from "../db/workspace";
+import { env } from "../env";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
+  secret: env.BETTER_AUTH_SECRET,
   emailAndPassword: {
     enabled: true,
     password: {
