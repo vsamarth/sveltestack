@@ -2,8 +2,6 @@
   import { Button } from "$lib/components/ui/button";
   import * as Empty from "$lib/components/ui/empty";
   import { CloudIcon } from "@lucide/svelte";
-
-  let { data } = $props();
 </script>
 
 <Empty.Root class="border border-dashed">

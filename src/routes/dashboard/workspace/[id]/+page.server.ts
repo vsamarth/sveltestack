@@ -1,7 +1,4 @@
-import {
-  getWorkspaceById,
-  setLastActiveWorkspace,
-} from "$lib/server/db/workspace";
+import { getWorkspaceById } from "$lib/server/db/workspace";
 import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 
@@ -19,8 +16,6 @@ export const load: PageServerLoad = async ({ locals, params }) => {
   if (workspace.ownerId !== locals.user.id) {
     throw error(403, "Forbidden");
   }
-
-  await setLastActiveWorkspace(locals.user.id, workspace.id);
   return {
     workspace,
   };

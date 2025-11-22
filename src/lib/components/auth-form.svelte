@@ -40,7 +40,7 @@
           const { error } = await authClient.signIn.email({
             email: form.data.email as string,
             password: form.data.password as string,
-            callbackURL: "/",
+            callbackURL: "/dashboard",
           });
           if (error)
             setError(form, "password", getErrorMessage(error.code ?? ""));

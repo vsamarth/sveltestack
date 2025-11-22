@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import type { ComponentProps } from "svelte";
-  import type { Workspace } from "$lib/server/db/schema";
+  import type { User, Workspace } from "$lib/server/db/schema";
   import {
     EllipsisIcon,
     FolderIcon,
@@ -9,13 +9,17 @@
     Trash2Icon,
   } from "@lucide/svelte";
   import * as DropdownMenu from "./ui/dropdown-menu";
+  import { page } from "$app/state";
+  import NavUser from "./nav-user.svelte";
 
   let {
     workspaces = [],
+    user,
     ref = $bindable(null),
     ...restProps
   }: ComponentProps<typeof Sidebar.Root> & {
     workspaces?: Workspace[];
+    user: User;
   } = $props();
 
   const sidebar = Sidebar.useSidebar();
@@ -28,7 +32,7 @@
       <Sidebar.Menu>
         {#each workspaces as item (item.name)}
           <Sidebar.MenuItem>
-            <Sidebar.MenuButton>
+            <Sidebar.MenuButton isActive={page.params.id === item.id}>
               {#snippet child({ props })}
                 <a href={`/dashboard/workspace/${item.id}`} {...props}>
                   <!-- <item.icon /> -->
@@ -70,5 +74,8 @@
       </Sidebar.Menu>
     </Sidebar.Group>
   </Sidebar.Content>
+  <Sidebar.Footer>
+    <NavUser {user} />
+  </Sidebar.Footer>
   <Sidebar.Rail />
 </Sidebar.Root>
