@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SignupForm from "$lib/components/signup-form.svelte";
+  import AuthForm from "$lib/components/auth-form.svelte";
 </script>
 
-<SignupForm />
+<AuthForm mode="signup" />

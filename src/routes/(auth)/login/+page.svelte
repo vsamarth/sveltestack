@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LoginForm from "$lib/components/login-form.svelte";
+  import AuthForm from "$lib/components/auth-form.svelte";
 </script>
 
-<LoginForm />
+<AuthForm mode="login" />
