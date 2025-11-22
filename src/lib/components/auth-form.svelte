@@ -40,7 +40,7 @@
           const { error } = await authClient.signIn.email({
             email: form.data.email as string,
             password: form.data.password as string,
-            callbackURL: "/",
+            callbackURL: "/dashboard",
           });
           if (error)
             setError(form, "password", getErrorMessage(error.code ?? ""));
@@ -89,19 +89,48 @@
   const c = config[mode];
 </script>
 
-{#snippet field(name: "email" | "password", label: string, showToggle = false)}
-  <Form.Field {form} {name}>
+{#snippet emailField()}
+  <Form.Field {form} name="email">
     <Form.Control>
       {#snippet children({ props })}
-        <Form.Label>{label}</Form.Label>
-        {#if showToggle}
-          <InputGroup.Root>
-            <InputGroup.Input
-              {...props}
-              type={showPassword ? "text" : "password"}
-              bind:value={$formData.password}
-            />
-            <InputGroup.Addon align="inline-end" class="rounded-r-md">
+        <Form.Label>Email</Form.Label>
+        <Input
+          {...props}
+          type="email"
+          autocomplete="email"
+          bind:value={$formData.email}
+        />
+      {/snippet}
+    </Form.Control>
+    <Form.FieldErrors>
+      {#snippet children({ errors, errorProps })}
+        {#if errors && errors.length > 0}
+          <div {...errorProps}>{errors[0]}</div>
+        {/if}
+      {/snippet}
+    </Form.FieldErrors>
+  </Form.Field>
+{/snippet}
+
+{#snippet passwordField()}
+  <Form.Field {form} name="password">
+    <Form.Control>
+      {#snippet children({ props })}
+        <Form.Label>Password</Form.Label>
+        <InputGroup.Root>
+          <InputGroup.Input
+            {...props}
+            type={showPassword ? "text" : "password"}
+            autocomplete={mode === "signup"
+              ? "new-password"
+              : "current-password"}
+            bind:value={$formData.password}
+          />
+          {#if $formData.password}
+            <InputGroup.Addon
+              align="inline-end"
+              class="rounded-r-md animate-in fade-in"
+            >
               <Button
                 variant="ghost"
                 size="icon"
@@ -120,12 +149,8 @@
                 >
               </Button>
             </InputGroup.Addon>
-          </InputGroup.Root>
-        {:else if name === "email"}
-          <Input {...props} bind:value={$formData.email} />
-        {:else}
-          <Input {...props} bind:value={$formData.password} />
-        {/if}
+          {/if}
+        </InputGroup.Root>
       {/snippet}
     </Form.Control>
     <Form.FieldErrors>
@@ -168,11 +193,11 @@
       <h1 class={c.titleClass}>{c.title}</h1>
     </div>
 
-    {@render field("email", "Email")}
+    {@render emailField()}
     {#if mode === "signup"}
       {@render nameField()}
     {/if}
-    {@render field("password", "Password", mode === "signup")}
+    {@render passwordField()}
 
     <Field>
       <Button type="submit" disabled={$delayed}>
