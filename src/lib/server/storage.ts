@@ -20,7 +20,7 @@ export async function initBucket() {
   try {
     await s3Client.send(new HeadBucketCommand({ Bucket: env.STORAGE_BUCKET }));
     console.log(`Bucket '${env.STORAGE_BUCKET}' already exists`);
-  } catch (_error) {
+  } catch {
     // Bucket doesn't exist, create it
     try {
       await s3Client.send(

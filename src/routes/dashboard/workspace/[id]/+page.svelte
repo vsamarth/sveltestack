@@ -138,11 +138,6 @@
     uppy.upload();
   }
 
-  function handleCancelAll() {
-    uppy.cancelAll();
-    isUploading = false;
-  }
-
   function handleRemoveFile(fileId: string) {
     uppy.removeFile(fileId);
   }
@@ -155,7 +150,6 @@
       {isUploading}
       onRemove={handleRemoveFile}
       onStartUpload={handleStartUpload}
-      onCancelAll={handleCancelAll}
     />
   </UppyContextProvider>
 </div>

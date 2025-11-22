@@ -26,12 +26,10 @@
     files: FileWithProgress[];
     onRemove: (fileId: string) => void;
     onStartUpload: () => void;
-    onCancelAll: () => void;
     isUploading: boolean;
   }
 
-  let { files, onRemove, onStartUpload, onCancelAll, isUploading }: Props =
-    $props();
+  let { files, onRemove, onStartUpload, isUploading }: Props = $props();
 
   let isDragging = $state(false);
 
@@ -76,6 +74,9 @@
 
   const hasFiles = $derived(files.length > 0);
   const gridCols = $derived(files.length === 1 ? "grid-cols-1" : "grid-cols-2");
+  const totalSize = $derived(
+    files.reduce((acc, file) => acc + (file.size ?? 0), 0),
+  );
 </script>
 
 {#snippet emptyState()}
@@ -96,11 +97,20 @@
   {@const Icon = getFileIcon(file)}
   {@const progress = file.progress?.percentage ?? 0}
   {@const isUploadingFile = progress > 0 && progress < 100}
+  {@const isComplete = progress === 100}
 
   <div
-    class="flex items-center gap-3 p-3 rounded-lg border bg-card transition-colors"
+    class="relative flex items-center gap-3 p-3 rounded-lg border bg-card transition-colors overflow-hidden"
   >
-    <div class={getIconColor(file)}>
+    <!-- Progress indicator as background -->
+    {#if isUploadingFile}
+      <div
+        class="absolute inset-0 bg-primary/5 transition-all duration-300 ease-out"
+        style="width: {progress}%"
+      ></div>
+    {/if}
+
+    <div class="relative {getIconColor(file)}">
       {#if isUploadingFile}
         <Spinner class="size-5" />
       {:else}
@@ -108,19 +118,16 @@
       {/if}
     </div>
 
-    <div class="flex-1 min-w-0 space-y-1.5">
-      <div class="flex items-start justify-between gap-2">
+    <div class="relative flex-1 min-w-0">
+      <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
           <p class="font-medium text-sm truncate">{file.name}</p>
           <p class="text-xs text-muted-foreground">
             {formatFileSize(file.size ?? 0)}
-            {#if file.progress}
-              · {progress.toFixed(0)}%
-            {/if}
           </p>
         </div>
 
-        {#if !isUploadingFile && progress !== 100}
+        {#if !isUploadingFile && !isComplete}
           <Button
             size="icon"
             variant="ghost"
@@ -133,16 +140,9 @@
       </div>
 
       {#if file.error}
-        <p class="text-xs text-destructive">
+        <p class="text-xs text-destructive mt-1">
           {file.error}
         </p>
-      {:else if file.progress}
-        <div class="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
-          <div
-            class="bg-primary h-full transition-all duration-300 ease-out"
-            style="width: {progress}%"
-          ></div>
-        </div>
       {/if}
     </div>
   </div>
@@ -170,26 +170,18 @@
     >
       <div class="flex items-center justify-between gap-3">
         <div class="text-sm text-muted-foreground">
-          {files.length}
-          {files.length === 1 ? "file" : "files"} ready
+          {formatFileSize(totalSize)}
         </div>
-        <div class="flex gap-2">
+        <Button size="sm" onclick={onStartUpload} disabled={isUploading}>
           {#if isUploading}
-            <Button variant="outline" size="sm" onclick={onCancelAll}>
-              Cancel
-            </Button>
+            <Spinner class="size-4" />
+            Uploading...
+          {:else}
+            <UploadIcon class="size-4" />
+            Upload {files.length}
+            {files.length === 1 ? "file" : "files"}
           {/if}
-          <Button size="sm" onclick={onStartUpload} disabled={isUploading}>
-            {#if isUploading}
-              <Spinner class="size-4" />
-              Uploading...
-            {:else}
-              <UploadIcon class="size-4" />
-              Upload {files.length}
-              {files.length === 1 ? "file" : "files"}
-            {/if}
-          </Button>
-        </div>
+        </Button>
       </div>
     </div>
   {:else}

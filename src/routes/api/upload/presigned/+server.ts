@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { getPresignedUploadUrl, initBucket } from "$lib/server/storage";
+import { getPresignedUploadUrl } from "$lib/server/storage";
 import { ulid } from "ulid";
 import type { RequestHandler } from "./$types";
 
