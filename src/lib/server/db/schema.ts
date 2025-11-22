@@ -1,4 +1,5 @@
 import { pgTable, timestamp, boolean, text } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { ulid } from "ulid";
 
 // Better Auth tables
@@ -16,6 +17,12 @@ export const user = pgTable("user", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+export const userRelations = relations(user, ({ many }) => ({
+  accounts: many(account),
+  sessions: many(session),
+  workspaces: many(workspace),
+}));
 
 export const session = pgTable("session", {
   id: text("id")
@@ -56,6 +63,13 @@ export const account = pgTable("account", {
     .notNull(),
 });
 
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, {
+    fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
 export const verification = pgTable("verification", {
   id: text("id")
     .primaryKey()
@@ -70,6 +84,37 @@ export const verification = pgTable("verification", {
     .notNull(),
 });
 
+export const workspace = pgTable("workspace", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => ulid()),
+  name: text("name").notNull(),
+  ownerId: text("owner_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const file = pgTable("file", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => ulid()),
+  filename: text("filename").notNull(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspace.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
 // Export types for use throughout the application
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
@@ -79,3 +124,6 @@ export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
 export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
+
+export type Workspace = typeof workspace.$inferSelect;
+export type NewWorkspace = typeof workspace.$inferInsert;
