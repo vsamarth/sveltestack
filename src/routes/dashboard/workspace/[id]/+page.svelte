@@ -280,7 +280,9 @@
   function handleSelectFiles() {
     triggerFileSelect?.();
   }
-</script>{#key data.workspace.id}
+</script>
+
+{#key data.workspace.id}
   <div class="flex flex-col items-center h-full p-6 gap-8">
     <UppyContextProvider {uppy}>
       {#if storedFiles.length === 0}
@@ -290,7 +292,7 @@
           {isUploading}
           onRemove={handleRemoveFile}
           onStartUpload={handleStartUpload}
-          openFileDialog={(fn) => triggerFileSelect = fn}
+          openFileDialog={(fn) => (triggerFileSelect = fn)}
         />
       {:else}
         <div class="w-full max-w-6xl mx-auto">
@@ -313,7 +315,7 @@
                 {isUploading}
                 onRemove={handleRemoveFile}
                 onStartUpload={handleStartUpload}
-                openFileDialog={(fn) => triggerFileSelect = fn}
+                openFileDialog={(fn) => (triggerFileSelect = fn)}
               />
             </div>
           {:else}
@@ -324,7 +326,7 @@
                 {isUploading}
                 onRemove={handleRemoveFile}
                 onStartUpload={handleStartUpload}
-                openFileDialog={(fn) => triggerFileSelect = fn}
+                openFileDialog={(fn) => (triggerFileSelect = fn)}
               />
             </div>
           {/if}
@@ -392,7 +394,7 @@
                     </Table.Cell>
                     <Table.Cell>
                       <span class="text-sm text-muted-foreground">
-                        {prettyBytes(parseInt(file.size || '0'))}
+                        {prettyBytes(parseInt(file.size || "0"))}
                       </span>
                     </Table.Cell>
                     <Table.Cell>

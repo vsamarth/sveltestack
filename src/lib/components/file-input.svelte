@@ -31,7 +31,8 @@
     openFileDialog?: (openFn: () => void) => void;
   }
 
-  let { files, onRemove, onStartUpload, isUploading, openFileDialog }: Props = $props();
+  let { files, onRemove, onStartUpload, isUploading, openFileDialog }: Props =
+    $props();
 
   let isDragging = $state(false);
   let inputElement: HTMLInputElement;
