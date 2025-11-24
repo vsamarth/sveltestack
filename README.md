@@ -46,58 +46,23 @@ Vault is the reference application included with SvelteStack, demonstrating how 
 
 ## Getting Started
 
-### 1. Clone the repository
+### Quick Start
 
 ```bash
 git clone https://github.com/vsamarth/sveltestack.git
 cd sveltestack
+bash scripts/setup.sh
 ```
 
-### 2. Install dependencies
+The setup script will:
+- Check all prerequisites (Node.js, Bun, Docker)
+- Install dependencies
+- Create `.env` file with generated secrets
+- Start the database
+- Run migrations
+- Optionally seed sample data
 
-```bash
-bun install
-```
-
-### 3. Set up environment variables
-
-Create a `.env` file in the root directory:
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/vault
-
-# Authentication
-BETTER_AUTH_SECRET=your-secret-key-here
-BETTER_AUTH_URL=http://localhost:5173
-
-# S3 Storage
-S3_ENDPOINT=http://localhost:9000
-S3_ACCESS_KEY_ID=minioadmin
-S3_SECRET_ACCESS_KEY=minioadmin
-S3_BUCKET_NAME=vault-files
-S3_REGION=us-east-1
-```
-
-### 4. Start the database
-
-```bash
-bun db:start
-```
-
-### 5. Run database migrations
-
-```bash
-bun db:push
-```
-
-### 6. (Optional) Seed the database
-
-```bash
-bun db:seed
-```
-
-### 7. Start the development server
+Once setup is complete, start the development server:
 
 ```bash
 bun dev
@@ -136,30 +101,6 @@ Ensure all production environment variables are set:
 - `BETTER_AUTH_SECRET` - Secure random string
 - `BETTER_AUTH_URL` - Production URL
 - S3 credentials for file storage
-
-## Why SvelteStack?
-
-- **Production-Ready**: Not just a template, but a complete starter with real features
-- **Best Practices**: Modern architecture patterns and code organization
-- **Fully Typed**: TypeScript throughout with proper type inference
-- **Battle-Tested**: Includes authentication, database, storage, and UI components
-- **Customizable**: Easy to strip out what you don't need or extend what you do
-- **Learning Resource**: Well-documented code showing how pieces fit together
-
-## Contributing
-
-Contributions are welcome! Whether it's:
-
-- 🐛 Bug fixes
-- ✨ New features for the starter kit
-- 📚 Documentation improvements
-- 🎨 UI/UX enhancements
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 
