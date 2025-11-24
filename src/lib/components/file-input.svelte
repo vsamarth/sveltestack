@@ -13,6 +13,7 @@
   } from "@lucide/svelte";
   import { emptyMediaVariants } from "./ui/empty/empty-media.svelte";
   import type { UppyFile, Meta } from "@uppy/core";
+  import prettyBytes from "pretty-bytes";
 
   type FileWithProgress = UppyFile<Meta, Record<string, never>> & {
     progress?: {
@@ -27,11 +28,13 @@
     onRemove: (fileId: string) => void;
     onStartUpload: () => void;
     isUploading: boolean;
+    openFileDialog?: (openFn: () => void) => void;
   }
 
-  let { files, onRemove, onStartUpload, isUploading }: Props = $props();
+  let { files, onRemove, onStartUpload, isUploading, openFileDialog }: Props = $props();
 
   let isDragging = $state(false);
+  let inputElement: HTMLInputElement;
 
   const { getRootProps, getInputProps } = useDropzone({
     noClick: true,
@@ -45,14 +48,6 @@
       isDragging = false;
     },
   });
-
-  function formatFileSize(bytes: number): string {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-  }
 
   function getFileIcon(file: FileWithProgress) {
     const error = file.error;
@@ -77,6 +72,12 @@
   const totalSize = $derived(
     files.reduce((acc, file) => acc + (file.size ?? 0), 0),
   );
+
+  $effect(() => {
+    if (openFileDialog && inputElement) {
+      openFileDialog(() => inputElement.click());
+    }
+  });
 </script>
 
 {#snippet emptyState()}
@@ -123,7 +124,7 @@
         <div class="min-w-0">
           <p class="font-medium text-sm truncate">{file.name}</p>
           <p class="text-xs text-muted-foreground">
-            {formatFileSize(file.size ?? 0)}
+            {prettyBytes(file.size ?? 0)}
           </p>
         </div>
 
@@ -156,7 +157,7 @@
       : 'border-transparent'} {hasFiles ? 'p-6' : 'p-12'}"
   {...getRootProps()}
 >
-  <input {...getInputProps()} class="hidden sr-only" />
+  <input bind:this={inputElement} {...getInputProps()} class="hidden sr-only" />
 
   {#if hasFiles}
     <Card.Content class="grid {gridCols} gap-3">
@@ -170,7 +171,7 @@
     >
       <div class="flex items-center justify-between gap-3">
         <div class="text-sm text-muted-foreground">
-          {formatFileSize(totalSize)}
+          {prettyBytes(totalSize)}
         </div>
         <Button size="sm" onclick={onStartUpload} disabled={isUploading}>
           {#if isUploading}

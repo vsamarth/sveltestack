@@ -11,6 +11,7 @@
   import { Trash2, Download, FileIcon, Upload, X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
   import { enhance } from "$app/forms";
+  import prettyBytes from "pretty-bytes";
 
   let { data }: { data: PageData } = $props();
 
@@ -174,6 +175,8 @@
   let isDialogOpen = $state(false);
   let selectedImage = $state<{ url: string; filename: string } | null>(null);
 
+  let triggerFileSelect: (() => void) | null = null;
+
   // Check if file is an image
   function isImageFile(contentType: string | null): boolean {
     if (!contentType) return false;
@@ -274,25 +277,10 @@
     uppy.removeFile(fileId);
   }
 
-  function formatFileSize(sizeStr: string | null): string {
-    if (!sizeStr) return "0 B";
-
-    const bytes = parseInt(sizeStr);
-    if (isNaN(bytes)) return "0 B";
-
-    const units = ["B", "KB", "MB", "GB", "TB"];
-    const k = 1024;
-
-    if (bytes === 0) return "0 B";
-
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    const size = bytes / Math.pow(k, i);
-
-    return `${size.toFixed(2)} ${units[i]}`;
+  function handleSelectFiles() {
+    triggerFileSelect?.();
   }
-</script>
-
-{#key data.workspace.id}
+</script>{#key data.workspace.id}
   <div class="flex flex-col items-center h-full p-6 gap-8">
     <UppyContextProvider {uppy}>
       {#if storedFiles.length === 0}
@@ -302,6 +290,7 @@
           {isUploading}
           onRemove={handleRemoveFile}
           onStartUpload={handleStartUpload}
+          openFileDialog={(fn) => triggerFileSelect = fn}
         />
       {:else}
         <div class="w-full max-w-6xl mx-auto">
@@ -324,6 +313,18 @@
                 {isUploading}
                 onRemove={handleRemoveFile}
                 onStartUpload={handleStartUpload}
+                openFileDialog={(fn) => triggerFileSelect = fn}
+              />
+            </div>
+          {:else}
+            <!-- Hidden FileInput for file selection -->
+            <div class="hidden">
+              <FileInput
+                {files}
+                {isUploading}
+                onRemove={handleRemoveFile}
+                onStartUpload={handleStartUpload}
+                openFileDialog={(fn) => triggerFileSelect = fn}
               />
             </div>
           {/if}
@@ -338,14 +339,7 @@
                   Add additional files to this workspace
                 </p>
               </div>
-              <Button
-                onclick={() =>
-                  (
-                    document.querySelector(
-                      'input[type="file"]',
-                    ) as HTMLInputElement
-                  )?.click()}
-              >
+              <Button onclick={handleSelectFiles}>
                 <Upload class="h-4 w-4 mr-2" />
                 Select Files
               </Button>
@@ -398,7 +392,7 @@
                     </Table.Cell>
                     <Table.Cell>
                       <span class="text-sm text-muted-foreground">
-                        {formatFileSize(file.size)}
+                        {prettyBytes(parseInt(file.size || '0'))}
                       </span>
                     </Table.Cell>
                     <Table.Cell>

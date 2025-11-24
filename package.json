@@ -37,6 +37,8 @@
     ]
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.937.0",
+    "@aws-sdk/s3-request-presigner": "^3.937.0",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@lucide/svelte": "^0.544.0",
@@ -50,6 +52,7 @@
     "drizzle-orm": "^0.44.7",
     "formsnap": "^2.0.1",
     "pg": "^8.16.3",
+    "pretty-bytes": "^7.1.0",
     "superforms": "^0.0.1",
     "tailwind-merge": "^3.3.1",
     "tailwind-variants": "^3.1.1",
