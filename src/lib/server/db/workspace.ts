@@ -18,7 +18,11 @@ export async function createDefaultWorkspace(userId: string) {
 }
 
 export async function getWorkspaces(userId: string) {
-  return await db.select().from(workspace).where(eq(workspace.ownerId, userId));
+  return await db
+    .select()
+    .from(workspace)
+    .where(eq(workspace.ownerId, userId))
+    .orderBy(workspace.createdAt);
 }
 
 export async function getWorkspaceById(workspaceId: string) {
