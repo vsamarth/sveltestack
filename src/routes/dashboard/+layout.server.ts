@@ -1,6 +1,9 @@
 import { getWorkspaces } from "$lib/server/db/workspace";
 import type { LayoutServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
+import { superValidate } from "sveltekit-superforms";
+import { zod4 } from "sveltekit-superforms/adapters";
+import { workspaceSchema } from "$lib/validation";
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   if (!locals.user) {
@@ -12,5 +15,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   return {
     user: locals.user,
     workspaces,
+    workspaceForm: await superValidate(zod4(workspaceSchema)),
   };
 };

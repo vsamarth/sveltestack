@@ -9,6 +9,7 @@
   <AppSidebar
     workspaces={data.workspaces}
     user={{ ...data.user, image: data.user.image ?? null }}
+    workspaceForm={data.workspaceForm}
   />
   <Sidebar.Inset>
     <header class="flex h-16 shrink-0 items-center gap-2 px-4">

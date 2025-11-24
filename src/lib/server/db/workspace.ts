@@ -42,6 +42,16 @@ export async function createWorkspace(name: string, userId: string) {
   return result[0];
 }
 
+export async function updateWorkspace(workspaceId: string, name: string) {
+  const result = await db
+    .update(workspace)
+    .set({ name })
+    .where(eq(workspace.id, workspaceId))
+    .returning();
+
+  return result[0];
+}
+
 export async function deleteWorkspace(workspaceId: string) {
   await db.delete(workspace).where(eq(workspace.id, workspaceId));
 }
