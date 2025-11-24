@@ -55,6 +55,7 @@ bash scripts/setup.sh
 ```
 
 The setup script will:
+
 - Check all prerequisites (Node.js, Bun, Docker)
 - Install dependencies
 - Create `.env` file with generated secrets
