@@ -48,7 +48,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://root:mysecretpassword@localhost:5432/local
-      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET || 'test-secret-key-for-ci-only-change-in-production' }}
+      BETTER_AUTH_SECRET: test-secret-key-for-ci-only-change-in-production
       NODE_ENV: test
 
     steps:
@@ -72,6 +72,33 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_DB: local
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      minio:
+        image: minio/minio
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        options: >-
+          --health-cmd "mc ready local"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+          server /data --console-address ":9001"
+        ports:
+          - 9000:9000
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,5 +115,10 @@ jobs:
         run: bun run build
         env:
           DATABASE_URL: postgresql://root:mysecretpassword@localhost:5432/local
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET || 'test-secret-key-for-ci-only-change-in-production' }}
+          BETTER_AUTH_SECRET: test-secret-key-for-ci-only-change-in-production
           NODE_ENV: test
+          STORAGE_ENDPOINT: http://localhost:9000
+          STORAGE_ACCESS_KEY: minioadmin
+          STORAGE_SECRET_KEY: minioadmin
+          STORAGE_BUCKET: uploads
+          STORAGE_REGION: us-east-1
