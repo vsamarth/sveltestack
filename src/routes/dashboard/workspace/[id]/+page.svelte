@@ -12,6 +12,7 @@
   import { invalidateAll } from "$app/navigation";
   import { enhance } from "$app/forms";
   import prettyBytes from "pretty-bytes";
+  import { toast } from "svelte-sonner";
 
   let { data }: { data: PageData } = $props();
 
@@ -127,8 +128,13 @@
 
           // Reload files list from server
           await invalidateAll();
+
+          toast.success("File uploaded", {
+            description: file.name,
+          });
         } catch (error) {
           console.error("Failed to confirm upload:", error);
+          toast.error("Failed to confirm upload");
         }
 
         // Keep file in list with 100% progress briefly, then remove
@@ -254,6 +260,7 @@
   function handleDeleteFile(fileId: string) {
     fileIdInput.value = fileId;
     deleteForm.requestSubmit();
+    toast.success("File deleted");
   }
 
   // Sync files with server data and cleanup
