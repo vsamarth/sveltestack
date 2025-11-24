@@ -9,6 +9,8 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import { Trash2, Download, FileIcon, Upload, X } from "@lucide/svelte";
+  import { invalidateAll } from "$app/navigation";
+  import { enhance } from "$app/forms";
 
   let { data }: { data: PageData } = $props();
 
@@ -122,8 +124,8 @@
             body: JSON.stringify({ fileId: file.meta.fileId }),
           });
 
-          // Reload files list
-          await loadFiles();
+          // Reload files list from server
+          await invalidateAll();
         } catch (error) {
           console.error("Failed to confirm upload:", error);
         }
@@ -168,22 +170,9 @@
   let uppy = $state.raw(createUppyInstance());
   let files = $state<FileWithProgress[]>([]);
   let isUploading = $state(false);
-  let storedFiles = $state<StoredFile[]>([]);
+  let storedFiles = $state<StoredFile[]>(data.files);
   let isDialogOpen = $state(false);
   let selectedImage = $state<{ url: string; filename: string } | null>(null);
-
-  // Load files from database
-  async function loadFiles() {
-    try {
-      const response = await fetch(`/api/workspace/${data.workspace.id}/files`);
-      if (response.ok) {
-        const responseData = await response.json();
-        storedFiles = responseData.files;
-      }
-    } catch (error) {
-      console.error("Failed to load files:", error);
-    }
-  }
 
   // Check if file is an image
   function isImageFile(contentType: string | null): boolean {
@@ -255,30 +244,18 @@
     }
   }
 
-  // Delete file
-  async function handleDeleteFile(fileId: string) {
-    try {
-      const response = await fetch(
-        `/api/workspace/${data.workspace.id}/files`,
-        {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fileId }),
-        },
-      );
+  let deleteForm: HTMLFormElement;
+  let fileIdInput: HTMLInputElement;
 
-      if (response.ok) {
-        await loadFiles();
-      }
-    } catch (error) {
-      console.error("Failed to delete file:", error);
-    }
+  // Delete file
+  function handleDeleteFile(fileId: string) {
+    fileIdInput.value = fileId;
+    deleteForm.requestSubmit();
   }
 
-  // Load files and cleanup when workspace changes
+  // Sync files with server data and cleanup
   $effect(() => {
-    void data.workspace.id; // Track workspace changes
-    loadFiles();
+    storedFiles = data.files;
 
     return () => {
       // Cleanup on workspace change or component unmount
@@ -493,5 +470,16 @@
         </Dialog.Close>
       </Dialog.Content>
     </Dialog.Root>
+
+    <!-- Hidden form for delete action -->
+    <form
+      bind:this={deleteForm}
+      method="POST"
+      action="?/deleteFile"
+      use:enhance
+      class="hidden"
+    >
+      <input bind:this={fileIdInput} type="hidden" name="fileId" />
+    </form>
   </div>
 {/key}

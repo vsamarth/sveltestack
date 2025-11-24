@@ -65,7 +65,7 @@ export async function getFileById(fileId: string) {
   return result;
 }
 
-export async function softDeleteFile(fileId: string) {
+export async function deleteFile(fileId: string) {
   const [deleted] = await db
     .update(file)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
