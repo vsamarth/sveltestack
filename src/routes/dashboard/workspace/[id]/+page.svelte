@@ -6,8 +6,9 @@
   import type { PageData } from "./$types";
   import type { File } from "$lib/server/db/schema";
   import * as Table from "$lib/components/ui/table";
+  import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
-  import { Trash2, Download, FileIcon, Upload } from "@lucide/svelte";
+  import { Trash2, Download, FileIcon, Upload, X } from "@lucide/svelte";
 
   let { data }: { data: PageData } = $props();
 
@@ -168,6 +169,8 @@
   let files = $state<FileWithProgress[]>([]);
   let isUploading = $state(false);
   let storedFiles = $state<StoredFile[]>([]);
+  let isDialogOpen = $state(false);
+  let selectedImage = $state<{ url: string; filename: string } | null>(null);
 
   // Load files from database
   async function loadFiles() {
@@ -179,6 +182,76 @@
       }
     } catch (error) {
       console.error("Failed to load files:", error);
+    }
+  }
+
+  // Check if file is an image
+  function isImageFile(contentType: string | null): boolean {
+    if (!contentType) return false;
+    return contentType.startsWith("image/");
+  }
+
+  // Check if file is a PDF
+  function isPdfFile(contentType: string | null): boolean {
+    if (!contentType) return false;
+    return contentType === "application/pdf";
+  }
+
+  // Handle file click (for image preview or PDF opening)
+  async function handleFileClick(file: StoredFile) {
+    const isImage = isImageFile(file.contentType);
+    const isPdf = isPdfFile(file.contentType);
+
+    if (!isImage && !isPdf) return;
+
+    try {
+      const response = await fetch(
+        `/api/workspace/${data.workspace.id}/files/${file.id}/preview`,
+      );
+
+      if (!response.ok) {
+        console.error("Failed to get preview URL");
+        return;
+      }
+
+      const { url } = await response.json();
+
+      if (isPdf) {
+        // Open PDF in new tab
+        window.open(url, "_blank");
+      } else if (isImage) {
+        // Show image in dialog
+        selectedImage = { url, filename: file.filename };
+        isDialogOpen = true;
+      }
+    } catch (error) {
+      console.error("Failed to load file preview:", error);
+    }
+  }
+
+  // Download file
+  async function handleDownloadFile(fileId: string, filename: string) {
+    try {
+      const response = await fetch(
+        `/api/workspace/${data.workspace.id}/files/${fileId}/download`,
+      );
+
+      if (!response.ok) {
+        console.error("Failed to get download URL");
+        return;
+      }
+
+      const { url } = await response.json();
+
+      // Create a temporary link and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Failed to download file:", error);
     }
   }
 
@@ -226,18 +299,18 @@
 
   function formatFileSize(sizeStr: string | null): string {
     if (!sizeStr) return "0 B";
-    
+
     const bytes = parseInt(sizeStr);
     if (isNaN(bytes)) return "0 B";
-    
+
     const units = ["B", "KB", "MB", "GB", "TB"];
     const k = 1024;
-    
+
     if (bytes === 0) return "0 B";
-    
+
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     const size = bytes / Math.pow(k, i);
-    
+
     return `${size.toFixed(2)} ${units[i]}`;
   }
 </script>
@@ -257,7 +330,9 @@
         <div class="w-full max-w-6xl mx-auto">
           <div class="mb-6 flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold tracking-tight mb-2">Uploaded Files</h2>
+              <h2 class="text-2xl font-bold tracking-tight mb-2">
+                Uploaded Files
+              </h2>
               <p class="text-muted-foreground">
                 Manage your uploaded files for this workspace
               </p>
@@ -277,12 +352,23 @@
           {/if}
           <!-- Compact upload trigger above table -->
           {#if files.length === 0}
-            <div class="mb-6 flex items-center justify-between p-4 border rounded-lg border-dashed">
+            <div
+              class="mb-6 flex items-center justify-between p-4 border rounded-lg border-dashed"
+            >
               <div>
                 <p class="font-medium">Upload more files</p>
-                <p class="text-sm text-muted-foreground">Add additional files to this workspace</p>
+                <p class="text-sm text-muted-foreground">
+                  Add additional files to this workspace
+                </p>
               </div>
-              <Button onclick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}>
+              <Button
+                onclick={() =>
+                  (
+                    document.querySelector(
+                      'input[type="file"]',
+                    ) as HTMLInputElement
+                  )?.click()}
+              >
                 <Upload class="h-4 w-4 mr-2" />
                 Select Files
               </Button>
@@ -299,14 +385,29 @@
                   <Table.Head class="font-semibold">Type</Table.Head>
                   <Table.Head class="font-semibold">Size</Table.Head>
                   <Table.Head class="font-semibold">Uploaded</Table.Head>
-                  <Table.Head class="text-right font-semibold">Actions</Table.Head>
+                  <Table.Head class="text-right font-semibold"
+                    >Actions</Table.Head
+                  >
                 </Table.Row>
               </Table.Header>
               <Table.Body>
                 {#each storedFiles as file (file.id)}
-                  <Table.Row class="hover:bg-muted/50">
+                  <Table.Row
+                    class="hover:bg-muted/50 {isImageFile(file.contentType) ||
+                    isPdfFile(file.contentType)
+                      ? 'cursor-pointer'
+                      : ''}"
+                    onclick={(e) => {
+                      // Only open preview if clicking on the row, not buttons
+                      if (!(e.target as HTMLElement).closest("button")) {
+                        handleFileClick(file);
+                      }
+                    }}
+                  >
                     <Table.Cell class="py-3">
-                      <div class="flex items-center justify-center w-8 h-8 rounded bg-muted">
+                      <div
+                        class="flex items-center justify-center w-8 h-8 rounded bg-muted"
+                      >
                         <FileIcon class="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Table.Cell>
@@ -338,6 +439,16 @@
                           variant="ghost"
                           size="icon"
                           class="h-8 w-8"
+                          onclick={() =>
+                            handleDownloadFile(file.id, file.filename)}
+                        >
+                          <Download class="h-4 w-4" />
+                          <span class="sr-only">Download {file.filename}</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8"
                           onclick={() => handleDeleteFile(file.id)}
                         >
                           <Trash2 class="h-4 w-4" />
@@ -353,5 +464,34 @@
         </div>
       {/if}
     </UppyContextProvider>
+
+    <!-- Image Preview Dialog -->
+    <Dialog.Root bind:open={isDialogOpen}>
+      <Dialog.Content class="max-w-4xl max-h-[90vh] p-0">
+        <Dialog.Header class="p-6 pb-4">
+          <Dialog.Title class="text-xl font-semibold">
+            {selectedImage?.filename || "Image Preview"}
+          </Dialog.Title>
+        </Dialog.Header>
+
+        {#if selectedImage}
+          <div class="relative w-full overflow-auto px-6 pb-6">
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.filename}
+              class="w-full h-auto rounded-md"
+              style="max-height: calc(90vh - 120px); object-fit: contain;"
+            />
+          </div>
+        {/if}
+
+        <Dialog.Close
+          class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        >
+          <X class="h-4 w-4" />
+          <span class="sr-only">Close</span>
+        </Dialog.Close>
+      </Dialog.Content>
+    </Dialog.Root>
   </div>
 {/key}

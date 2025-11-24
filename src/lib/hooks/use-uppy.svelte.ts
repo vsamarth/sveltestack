@@ -199,7 +199,7 @@ export function useUppy(options: UseUppyOptions) {
       resetUppyInstance(workspaceId);
       previousWorkspaceId = workspaceId;
     }
-    
+
     return () => {
       // Cleanup when effect is destroyed
       if (uppyInstance) {

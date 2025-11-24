@@ -1,6 +1,7 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   CreateBucketCommand,
 } from "@aws-sdk/client-s3";
@@ -44,6 +45,22 @@ export async function getPresignedUploadUrl(
     Bucket: env.STORAGE_BUCKET,
     Key: key,
     ContentType: contentType,
+  });
+
+  return await getSignedUrl(s3Client, command, { expiresIn });
+}
+
+export async function getPresignedDownloadUrl(
+  key: string,
+  filename?: string,
+  expiresIn = 3600,
+) {
+  const command = new GetObjectCommand({
+    Bucket: env.STORAGE_BUCKET,
+    Key: key,
+    ResponseContentDisposition: filename
+      ? `attachment; filename="${encodeURIComponent(filename)}"`
+      : undefined,
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn });
