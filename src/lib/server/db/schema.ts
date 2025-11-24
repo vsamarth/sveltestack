@@ -126,6 +126,13 @@ export const file = pgTable("file", {
     .primaryKey()
     .$defaultFn(() => ulid()),
   filename: text("filename").notNull(),
+  storageKey: text("storage_key").notNull().unique(),
+  size: text("size"),
+  contentType: text("content_type"),
+  status: text("status")
+    .$type<"pending" | "completed" | "failed">()
+    .default("pending")
+    .notNull(),
   workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspace.id, { onDelete: "cascade" }),

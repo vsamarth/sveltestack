@@ -31,25 +31,16 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: mysecretpassword
-          POSTGRES_DB: local
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     env:
       DATABASE_URL: postgresql://root:mysecretpassword@localhost:5432/local
-      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET || 'test-secret-key-for-ci-only-change-in-production' }}
+      BETTER_AUTH_SECRET: test-secret-key-for-ci-only-change-in-production
       NODE_ENV: test
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_ACCESS_KEY: minioadmin
+      STORAGE_SECRET_KEY: minioadmin
+      STORAGE_BUCKET: uploads
+      STORAGE_REGION: us-east-1
 
     steps:
       - name: Checkout code
@@ -62,6 +53,35 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Start Docker services (Postgres + MinIO)
+        run: docker compose -f compose.yaml up -d db minio
+
+      - name: Wait for Postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U root; then
+              echo "Postgres ready"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          exit 1
+
+      - name: Wait for MinIO
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:9000/minio/health/live > /dev/null; then
+              echo "MinIO ready"
+              exit 0
+            fi
+            echo "Waiting for MinIO..."
+            sleep 2
+          done
+          exit 1
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
@@ -69,9 +89,23 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f compose.yaml down -v
   build:
     name: Build
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql://root:mysecretpassword@localhost:5432/local
+      BETTER_AUTH_SECRET: test-secret-key-for-ci-only-change-in-production
+      NODE_ENV: test
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_ACCESS_KEY: minioadmin
+      STORAGE_SECRET_KEY: minioadmin
+      STORAGE_BUCKET: uploads
+      STORAGE_REGION: us-east-1
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,9 +118,38 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Start Docker services (Postgres + MinIO)
+        run: docker compose -f compose.yaml up -d db minio
+
+      - name: Wait for Postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U root; then
+              echo "Postgres ready"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          exit 1
+
+      - name: Wait for MinIO
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:9000/minio/health/live > /dev/null; then
+              echo "MinIO ready"
+              exit 0
+            fi
+            echo "Waiting for MinIO..."
+            sleep 2
+          done
+          exit 1
+
       - name: Build project
         run: bun run build
-        env:
-          DATABASE_URL: postgresql://root:mysecretpassword@localhost:5432/local
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET || 'test-secret-key-for-ci-only-change-in-production' }}
-          NODE_ENV: test
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f compose.yaml down -v
