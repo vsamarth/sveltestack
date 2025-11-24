@@ -5,7 +5,6 @@
     AlertTitle,
   } from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
-  import MailIcon from "@lucide/svelte/icons/mail";
   import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
   import { authClient } from "$lib/auth-client";
   import Spinner from "./ui/spinner/spinner.svelte";

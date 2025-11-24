@@ -21,6 +21,10 @@ export const auth = betterAuth({
         return await verify(data.hash, data.password);
       },
     },
+    sendResetPassword: async ({ url, user, token }) => {
+      console.log(`Reset password URL for ${user.email}: ${url}`);
+      console.log(`Token: ${token}`);
+    },
   },
   emailVerification: {
     sendOnSignUp: true,
