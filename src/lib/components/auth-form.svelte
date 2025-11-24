@@ -7,7 +7,6 @@
   import {
     FieldGroup,
     Field,
-    FieldSeparator,
     FieldDescription,
   } from "$lib/components/ui/field/index.js";
   import { Input } from "$lib/components/ui/input/index.js";

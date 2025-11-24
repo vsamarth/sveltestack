@@ -255,12 +255,26 @@
 
   let deleteForm: HTMLFormElement;
   let fileIdInput: HTMLInputElement;
+  let deleteDialogOpen = $state(false);
+  let fileToDelete = $state<{ id: string; name: string } | null>(null);
 
-  // Delete file
-  function handleDeleteFile(fileId: string) {
-    fileIdInput.value = fileId;
-    deleteForm.requestSubmit();
-    toast.success("File deleted");
+  // Open delete confirmation dialog
+  function openDeleteDialog(fileId: string, filename: string) {
+    fileToDelete = { id: fileId, name: filename };
+    deleteDialogOpen = true;
+  }
+
+  // Delete file after confirmation
+  function confirmDeleteFile() {
+    if (fileToDelete) {
+      fileIdInput.value = fileToDelete.id;
+      deleteForm.requestSubmit();
+      toast.success("File deleted", {
+        description: fileToDelete.name,
+      });
+      deleteDialogOpen = false;
+      fileToDelete = null;
+    }
   }
 
   // Sync files with server data and cleanup
@@ -429,7 +443,8 @@
                           variant="ghost"
                           size="icon"
                           class="h-8 w-8"
-                          onclick={() => handleDeleteFile(file.id)}
+                          onclick={() =>
+                            openDeleteDialog(file.id, file.filename)}
                         >
                           <Trash2 class="h-4 w-4" />
                           <span class="sr-only">Delete {file.filename}</span>
@@ -471,6 +486,34 @@
           <X class="h-4 w-4" />
           <span class="sr-only">Close</span>
         </Dialog.Close>
+      </Dialog.Content>
+    </Dialog.Root>
+
+    <!-- Delete File Confirmation Dialog -->
+    <Dialog.Root bind:open={deleteDialogOpen}>
+      <Dialog.Content class="sm:max-w-md">
+        <Dialog.Header>
+          <Dialog.Title>Delete File</Dialog.Title>
+          <Dialog.Description>
+            Are you sure you want to delete
+            <span class="font-semibold">{fileToDelete?.name}</span>? This action
+            cannot be undone.
+          </Dialog.Description>
+        </Dialog.Header>
+        <Dialog.Footer class="gap-2">
+          <Button
+            variant="outline"
+            onclick={() => {
+              deleteDialogOpen = false;
+              fileToDelete = null;
+            }}
+          >
+            Cancel
+          </Button>
+          <Button variant="destructive" onclick={confirmDeleteFile}>
+            Delete File
+          </Button>
+        </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
 

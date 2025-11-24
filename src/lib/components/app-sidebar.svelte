@@ -11,6 +11,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as DropdownMenu from "./ui/dropdown-menu";
   import * as Tooltip from "./ui/tooltip";
+  import * as Dialog from "./ui/dialog";
   import { page } from "$app/state";
   import NavUser from "./nav-user.svelte";
   import WorkspaceFormDialog from "./workspace-form-dialog.svelte";
@@ -36,6 +37,8 @@
   let dialogMode = $state<"create" | "rename">("create");
   let selectedWorkspaceId = $state("");
   let selectedWorkspaceName = $state("");
+  let deleteDialogOpen = $state(false);
+  let workspaceToDelete = $state<{ id: string; name: string } | null>(null);
 
   function openCreateDialog() {
     dialogMode = "create";
@@ -49,29 +52,33 @@
     dialogOpen = true;
   }
 
-  async function handleDeleteWorkspace(workspaceId: string) {
-    if (!confirm("Are you sure you want to delete this workspace?")) {
-      return;
-    }
+  function openDeleteWorkspaceDialog(workspaceId: string, name: string) {
+    workspaceToDelete = { id: workspaceId, name };
+    deleteDialogOpen = true;
+  }
+
+  async function confirmDeleteWorkspace() {
+    if (!workspaceToDelete) return;
 
     try {
       const response = await fetch("/api/workspace", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId }),
+        body: JSON.stringify({ workspaceId: workspaceToDelete.id }),
       });
 
       if (!response.ok) {
         const error = await response.text();
-        alert(error || "Failed to delete workspace");
+        console.error(error || "Failed to delete workspace");
         return;
       }
 
       const { redirectTo } = await response.json();
+      deleteDialogOpen = false;
+      workspaceToDelete = null;
       window.location.href = redirectTo;
     } catch (error) {
       console.error("Failed to delete workspace:", error);
-      alert("Failed to delete workspace");
     }
   }
 </script>
@@ -141,7 +148,8 @@
                   </Tooltip.Root>
                 {:else}
                   <DropdownMenu.Item
-                    onclick={() => handleDeleteWorkspace(item.id)}
+                    onclick={() =>
+                      openDeleteWorkspaceDialog(item.id, item.name)}
                   >
                     <Trash2Icon class="text-muted-foreground" />
                     <span>Delete Workspace</span>
@@ -169,3 +177,32 @@
     currentName={selectedWorkspaceName}
   />
 {/if}
+
+<!-- Delete Workspace Confirmation Dialog -->
+<Dialog.Root bind:open={deleteDialogOpen}>
+  <Dialog.Content class="sm:max-w-md">
+    <Dialog.Header>
+      <Dialog.Title>Delete Workspace</Dialog.Title>
+      <Dialog.Description>
+        Are you sure you want to delete
+        <span class="font-semibold">{workspaceToDelete?.name}</span>? This
+        action cannot be undone and all files in this workspace will be
+        permanently removed.
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer class="gap-2">
+      <Button
+        variant="outline"
+        onclick={() => {
+          deleteDialogOpen = false;
+          workspaceToDelete = null;
+        }}
+      >
+        Cancel
+      </Button>
+      <Button variant="destructive" onclick={confirmDeleteWorkspace}>
+        Delete Workspace
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
