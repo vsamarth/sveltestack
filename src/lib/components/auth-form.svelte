@@ -49,7 +49,7 @@
             email: form.data.email as string,
             password: form.data.password as string,
             name: (form.data as { name?: string }).name as string,
-            callbackURL: "/",
+            callbackURL: "/dashboard",
           });
           if (error) {
             setError(form, "password", getErrorMessage(error.code ?? ""));
