@@ -1,5 +1,6 @@
 <script lang="ts">
   import AppSidebar from "$lib/components/app-sidebar.svelte";
+  import VerificationBanner from "$lib/components/verification-banner.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 
   let { data, children } = $props();
@@ -11,10 +12,13 @@
     user={{ ...data.user, image: data.user.image ?? null }}
     workspaceForm={data.workspaceForm}
   />
-  <Sidebar.Inset>
-    <header class="flex h-16 shrink-0 items-center gap-2 px-4">
-      <Sidebar.Trigger class="-ml-1" />
-    </header>
+  <Sidebar.Inset class="p-12">
+    {#if !data.user.emailVerified}
+      <div class="px-4 pb-4">
+        <VerificationBanner email={data.user.email} />
+      </div>
+    {/if}
+
     {@render children()}
   </Sidebar.Inset>
 </Sidebar.Provider>

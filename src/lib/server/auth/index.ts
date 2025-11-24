@@ -22,6 +22,13 @@ export const auth = betterAuth({
       },
     },
   },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ url, user }) => {
+      console.log(`Verification URL for ${user.email}: ${url}`);
+    },
+  },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       if (!ctx.path.startsWith("/sign-up")) {
