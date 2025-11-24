@@ -5,6 +5,15 @@ import { sveltekit } from "@sveltejs/kit/vite";
 
 export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
+  build: {
+    rollupOptions: {
+      external: [
+        "@node-rs/argon2",
+        "@aws-sdk/client-s3",
+        "@aws-sdk/s3-request-presigner",
+      ],
+    },
+  },
   test: {
     expect: { requireAssertions: true },
     projects: [
