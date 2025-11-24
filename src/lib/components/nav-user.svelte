@@ -12,9 +12,11 @@
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
   import type { User } from "$lib/server/db/schema";
+  import AccountSettingsDialog from "./account-settings-dialog.svelte";
 
   let { user }: { user: User } = $props();
   const sidebar = useSidebar();
+  let accountSettingsOpen = $state(false);
 
   function getInitials(name: string) {
     const names = name.split(" ");
@@ -25,6 +27,10 @@
   async function handleLogout() {
     await authClient.signOut();
     goto("/login");
+  }
+
+  function openAccountSettings() {
+    accountSettingsOpen = true;
   }
 </script>
 
@@ -78,7 +84,7 @@
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
         <DropdownMenu.Group>
-          <DropdownMenu.Item>
+          <DropdownMenu.Item onclick={openAccountSettings}>
             <BadgeCheckIcon />
             Account
           </DropdownMenu.Item>
@@ -100,3 +106,5 @@
     </DropdownMenu.Root>
   </Sidebar.MenuItem>
 </Sidebar.Menu>
+
+<AccountSettingsDialog bind:open={accountSettingsOpen} {user} />

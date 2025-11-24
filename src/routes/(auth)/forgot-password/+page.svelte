@@ -31,7 +31,7 @@
 
         submittedEmail = form.data.email;
         showSuccess = true;
-      } catch (error) {
+      } catch {
         // Even on error, show success to prevent enumeration
         submittedEmail = form.data.email;
         showSuccess = true;

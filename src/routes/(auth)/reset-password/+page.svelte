@@ -50,7 +50,7 @@
         });
 
         if (error) {
-          setError(form, "password", getErrorMessage(error.code ?? ""));
+          setError(form, "password", getErrorMessage(error.code));
         } else {
           // Success! Redirect to login with success message
           toast.success(
@@ -58,7 +58,7 @@
           );
           goto("/login");
         }
-      } catch (error) {
+      } catch {
         setError(
           form,
           "password",
