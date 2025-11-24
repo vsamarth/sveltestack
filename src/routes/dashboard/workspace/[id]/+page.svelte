@@ -5,6 +5,9 @@
   import AwsS3 from "@uppy/aws-s3";
   import type { PageData } from "./$types";
   import type { File } from "$lib/server/db/schema";
+  import * as Table from "$lib/components/ui/table";
+  import { Button } from "$lib/components/ui/button";
+  import { Trash2, Download, FileIcon, Upload } from "@lucide/svelte";
 
   let { data }: { data: PageData } = $props();
 
@@ -220,41 +223,135 @@
   function handleRemoveFile(fileId: string) {
     uppy.removeFile(fileId);
   }
+
+  function formatFileSize(sizeStr: string | null): string {
+    if (!sizeStr) return "0 B";
+    
+    const bytes = parseInt(sizeStr);
+    if (isNaN(bytes)) return "0 B";
+    
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const k = 1024;
+    
+    if (bytes === 0) return "0 B";
+    
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const size = bytes / Math.pow(k, i);
+    
+    return `${size.toFixed(2)} ${units[i]}`;
+  }
 </script>
 
 {#key data.workspace.id}
   <div class="flex flex-col items-center h-full p-6 gap-8">
-    {#if storedFiles.length === 0}
-      <UppyContextProvider {uppy}>
+    <UppyContextProvider {uppy}>
+      {#if storedFiles.length === 0}
+        <!-- Empty state - centered with no header -->
         <FileInput
           {files}
           {isUploading}
           onRemove={handleRemoveFile}
           onStartUpload={handleStartUpload}
         />
-      </UppyContextProvider>
-    {:else}
-      <div class="w-full max-w-2xl">
-        <h3 class="text-lg font-semibold mb-4">Uploaded Files</h3>
-        <div class="space-y-2">
-          {#each storedFiles as file (file.id)}
-            <div class="flex items-center justify-between p-3 border rounded">
-              <div>
-                <div class="font-medium">{file.filename}</div>
-                <div class="text-sm text-muted-foreground">
-                  {file.size ? (parseInt(file.size) / 1024).toFixed(2) : "0"} KB
-                </div>
-              </div>
-              <button
-                onclick={() => handleDeleteFile(file.id)}
-                class="text-destructive hover:text-destructive/80 px-3 py-1 rounded border border-destructive hover:bg-destructive/10"
-              >
-                Delete
-              </button>
+      {:else}
+        <div class="w-full max-w-6xl mx-auto">
+          <div class="mb-6 flex items-center justify-between">
+            <div>
+              <h2 class="text-2xl font-bold tracking-tight mb-2">Uploaded Files</h2>
+              <p class="text-muted-foreground">
+                Manage your uploaded files for this workspace
+              </p>
             </div>
-          {/each}
+          </div>
+
+          <!-- File upload section -->
+          {#if files.length > 0}
+            <div class="mb-6">
+              <FileInput
+                {files}
+                {isUploading}
+                onRemove={handleRemoveFile}
+                onStartUpload={handleStartUpload}
+              />
+            </div>
+          {/if}
+          <!-- Compact upload trigger above table -->
+          {#if files.length === 0}
+            <div class="mb-6 flex items-center justify-between p-4 border rounded-lg border-dashed">
+              <div>
+                <p class="font-medium">Upload more files</p>
+                <p class="text-sm text-muted-foreground">Add additional files to this workspace</p>
+              </div>
+              <Button onclick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}>
+                <Upload class="h-4 w-4 mr-2" />
+                Select Files
+              </Button>
+            </div>
+          {/if}
+
+          <!-- Files table -->
+          <div class="rounded-lg border bg-card">
+            <Table.Root>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head class="w-12"></Table.Head>
+                  <Table.Head class="font-semibold">Name</Table.Head>
+                  <Table.Head class="font-semibold">Type</Table.Head>
+                  <Table.Head class="font-semibold">Size</Table.Head>
+                  <Table.Head class="font-semibold">Uploaded</Table.Head>
+                  <Table.Head class="text-right font-semibold">Actions</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {#each storedFiles as file (file.id)}
+                  <Table.Row class="hover:bg-muted/50">
+                    <Table.Cell class="py-3">
+                      <div class="flex items-center justify-center w-8 h-8 rounded bg-muted">
+                        <FileIcon class="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </Table.Cell>
+                    <Table.Cell class="font-medium">
+                      {file.filename}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <span class="text-sm text-muted-foreground">
+                        {file.contentType || "Unknown"}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <span class="text-sm text-muted-foreground">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <span class="text-sm text-muted-foreground">
+                        {new Date(file.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell class="text-right">
+                      <div class="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8"
+                          onclick={() => handleDeleteFile(file.id)}
+                        >
+                          <Trash2 class="h-4 w-4" />
+                          <span class="sr-only">Delete {file.filename}</span>
+                        </Button>
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                {/each}
+              </Table.Body>
+            </Table.Root>
+          </div>
         </div>
-      </div>
-    {/if}
+      {/if}
+    </UppyContextProvider>
   </div>
 {/key}
