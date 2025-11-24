@@ -3,6 +3,7 @@ import {
   deleteWorkspace,
   getWorkspaces,
   setLastActiveWorkspace,
+  updateWorkspace,
 } from "$lib/server/db/workspace";
 import { workspaceSchema } from "$lib/validation";
 import { error, json } from "@sveltejs/kit";
@@ -28,6 +29,41 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   } catch (err) {
     if (err && (err as { status: number }).status) throw err;
     throw error(500, "Failed to create workspace");
+  }
+};
+
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+  if (!locals.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  try {
+    const body = await request.json();
+    const workspaceId = body.workspaceId as string;
+    const result = workspaceSchema.safeParse({ name: body.name });
+
+    if (!workspaceId) {
+      throw error(400, "Workspace ID is required");
+    }
+
+    if (!result.success) {
+      throw error(400, { message: "Invalid workspace name" });
+    }
+
+    // Verify ownership
+    const userWorkspaces = await getWorkspaces(locals.user.id);
+    const workspaceToUpdate = userWorkspaces.find((w) => w.id === workspaceId);
+
+    if (!workspaceToUpdate) {
+      throw error(404, "Workspace not found");
+    }
+
+    const workspace = await updateWorkspace(workspaceId, result.data.name);
+
+    return json({ workspace });
+  } catch (err) {
+    if (err && (err as { status: number }).status) throw err;
+    throw error(500, "Failed to update workspace");
   }
 };
 

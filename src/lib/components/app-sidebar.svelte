@@ -2,13 +2,18 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import type { ComponentProps } from "svelte";
   import type { User, Workspace } from "$lib/server/db/schema";
-  import { EllipsisIcon, Trash2Icon, PlusIcon } from "@lucide/svelte";
+  import {
+    EllipsisIcon,
+    Trash2Icon,
+    PlusIcon,
+    PencilIcon,
+  } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import * as DropdownMenu from "./ui/dropdown-menu";
   import * as Tooltip from "./ui/tooltip";
   import { page } from "$app/state";
   import NavUser from "./nav-user.svelte";
-  import CreateWorkspaceDialog from "./create-workspace-dialog.svelte";
+  import WorkspaceFormDialog from "./workspace-form-dialog.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
 
@@ -27,7 +32,22 @@
   }: Props = $props();
 
   const sidebar = Sidebar.useSidebar();
-  let createDialogOpen = $state(false);
+  let dialogOpen = $state(false);
+  let dialogMode = $state<"create" | "rename">("create");
+  let selectedWorkspaceId = $state("");
+  let selectedWorkspaceName = $state("");
+
+  function openCreateDialog() {
+    dialogMode = "create";
+    dialogOpen = true;
+  }
+
+  function openRenameDialog(workspaceId: string, name: string) {
+    dialogMode = "rename";
+    selectedWorkspaceId = workspaceId;
+    selectedWorkspaceName = name;
+    dialogOpen = true;
+  }
 
   async function handleDeleteWorkspace(workspaceId: string) {
     if (!confirm("Are you sure you want to delete this workspace?")) {
@@ -65,7 +85,7 @@
           variant="ghost"
           size="icon"
           class="h-6 w-6"
-          onclick={() => (createDialogOpen = true)}
+          onclick={openCreateDialog}
         >
           <PlusIcon class="h-4 w-4" />
           <span class="sr-only">Add Workspace</span>
@@ -96,6 +116,13 @@
                 side={sidebar.isMobile ? "bottom" : "right"}
                 align={sidebar.isMobile ? "end" : "start"}
               >
+                <DropdownMenu.Item
+                  onclick={() => openRenameDialog(item.id, item.name)}
+                >
+                  <PencilIcon class="text-muted-foreground" />
+                  <span>Rename Workspace</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator />
                 {#if workspaces.length <= 1}
                   <Tooltip.Root>
                     <Tooltip.Trigger>
@@ -134,5 +161,11 @@
 </Sidebar.Root>
 
 {#if workspaceForm}
-  <CreateWorkspaceDialog bind:open={createDialogOpen} data={workspaceForm} />
+  <WorkspaceFormDialog
+    bind:open={dialogOpen}
+    data={workspaceForm}
+    mode={dialogMode}
+    workspaceId={selectedWorkspaceId}
+    currentName={selectedWorkspaceName}
+  />
 {/if}

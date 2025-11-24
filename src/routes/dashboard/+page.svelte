@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import CreateWorkspaceDialog from "$lib/components/create-workspace-dialog.svelte";
+  import WorkspaceFormDialog from "$lib/components/workspace-form-dialog.svelte";
   import { FolderIcon } from "@lucide/svelte";
   import { page } from "$app/state";
 
@@ -28,8 +28,9 @@
 </div>
 
 {#if page.data.workspaceForm}
-  <CreateWorkspaceDialog
+  <WorkspaceFormDialog
     bind:open={createDialogOpen}
     data={page.data.workspaceForm}
+    mode="create"
   />
 {/if}
