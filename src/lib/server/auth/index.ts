@@ -7,6 +7,7 @@ import { hash, verify } from "./hash";
 import { createAuthMiddleware } from "better-auth/api";
 import { createDefaultWorkspace } from "../db/workspace";
 import { env } from "../env";
+import { sendResetPasswordEmail, sendVerificationEmail } from "../email";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -20,6 +21,24 @@ export const auth = betterAuth({
       verify: async (data) => {
         return await verify(data.hash, data.password);
       },
+    },
+    sendResetPassword: async ({ url, user }) => {
+      await sendResetPasswordEmail({
+        email: user.email,
+        url,
+        username: user.name,
+      });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ url, user }) => {
+      await sendVerificationEmail({
+        email: user.email,
+        url,
+        username: user.name,
+      });
     },
   },
   hooks: {

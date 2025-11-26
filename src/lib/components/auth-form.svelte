@@ -114,7 +114,17 @@
   <Form.Field {form} name="password">
     <Form.Control>
       {#snippet children({ props })}
-        <Form.Label>Password</Form.Label>
+        <div class="flex items-center justify-between">
+          <Form.Label>Password</Form.Label>
+          {#if mode === "login"}
+            <a
+              href="/forgot-password"
+              class="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+            >
+              Forgot password?
+            </a>
+          {/if}
+        </div>
         <InputGroup.Root>
           <InputGroup.Input
             {...props}

@@ -15,6 +15,15 @@ const envSchema = z.object({
   STORAGE_SECRET_KEY: z.string().min(1, "STORAGE_SECRET_KEY is required"),
   STORAGE_BUCKET: z.string().min(1, "STORAGE_BUCKET is required"),
   STORAGE_REGION: z.string().min(1, "STORAGE_REGION is required"),
+  // Email configuration (optional)
+  EMAIL_API_KEY: z
+    .string()
+    .min(1, "EMAIL_API_KEY must be non-empty if provided")
+    .optional(),
+  EMAIL_FROM: z
+    .string()
+    .email("EMAIL_FROM must be a valid email address if provided")
+    .optional(),
 });
 
 /**

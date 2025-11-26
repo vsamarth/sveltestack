@@ -206,9 +206,9 @@
 
   // Delete file after confirmation
   function confirmDeleteFile() {
-    if (fileToDelete && fileIdInput && deleteForm) {
+    if (fileToDelete && fileIdInput) {
       fileIdInput.value = fileToDelete.id;
-      deleteForm.requestSubmit();
+      deleteForm?.requestSubmit();
       toast.success("File deleted", {
         description: fileToDelete.name,
       });
