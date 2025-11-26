@@ -1,6 +1,5 @@
 <script lang="ts">
-  import FileInput from "$lib/components/file-input.svelte";
-  import Uppy, { type UppyFile, type Meta } from "@uppy/core";
+  import Uppy from "@uppy/core";
   import { UppyContextProvider } from "@uppy/svelte";
   import AwsS3 from "@uppy/aws-s3";
   import type { PageData } from "./$types";
@@ -8,22 +7,15 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Upload, X } from "@lucide/svelte";
+  import { X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
   import FileTable from "$lib/components/file-table.svelte";
   import { siteConfig } from "$lib/config";
+  import DropzoneWrapper from "$lib/components/dropzone-wrapper.svelte";
 
   let { data }: { data: PageData } = $props();
-
-  type FileWithProgress = UppyFile<Meta, Record<string, never>> & {
-    progress?: {
-      percentage: number;
-      bytesUploaded: number;
-      bytesTotal: number;
-    };
-  };
 
   type StoredFile = Pick<
     File,
@@ -32,7 +24,7 @@
 
   function createUppyInstance() {
     const instance = new Uppy({
-      autoProceed: false,
+      autoProceed: true,
       restrictions: {
         maxFileSize: 10 * 1024 * 1024, // 10MB
         maxNumberOfFiles: 5,
@@ -75,47 +67,7 @@
       },
     });
 
-    // Setup event listeners
-    instance.on("file-added", (file) => {
-      files = [
-        ...files,
-        {
-          ...file,
-          progress: {
-            percentage: 0,
-            bytesUploaded: 0,
-            bytesTotal: file.size ?? 0,
-          },
-        } as FileWithProgress,
-      ];
-    });
-
-    instance.on("file-removed", (file) => {
-      if (file) {
-        files = files.filter((f) => f.id !== file.id);
-      }
-    });
-
-    instance.on("upload", () => {
-      isUploading = true;
-    });
-
-    instance.on("upload-progress", (file, progress) => {
-      if (file) {
-        files = files.map((f) =>
-          f.id === file.id
-            ? ({
-                ...f,
-                progress: {
-                  percentage: progress.percentage || 0,
-                  bytesUploaded: progress.bytesUploaded,
-                  bytesTotal: progress.bytesTotal,
-                },
-              } as FileWithProgress)
-            : f,
-        );
-      }
-    });
+    // Setup event listenersSetup event listeners
 
     instance.on("upload-success", async (file) => {
       if (file && file.meta.fileId) {
@@ -137,52 +89,32 @@
           console.error("Failed to confirm upload:", error);
           toast.error("Failed to confirm upload");
         }
-
-        // Keep file in list with 100% progress briefly, then remove
-        setTimeout(() => {
-          files = files.filter((f) => f.id !== file.id);
-        }, 1000);
       }
     });
 
     instance.on("upload-error", (file, error) => {
       if (file) {
-        files = files.map((f) =>
-          f.id === file.id
-            ? ({
-                ...f,
-                error: error.message || "Upload failed",
-              } as FileWithProgress)
-            : f,
-        );
+        toast.error("Upload failed", {
+          description: file.name,
+        });
       }
-    });
-
-    instance.on("complete", () => {
-      isUploading = false;
     });
 
     instance.on("restriction-failed", (file, error) => {
-      if (file) {
-        files = files.map((f) =>
-          f.id === file?.id
-            ? ({ ...f, error: error.message } as FileWithProgress)
-            : f,
-        );
-      }
+      toast.error("Upload restriction", {
+        description: error.message,
+      });
     });
 
     return instance;
   }
 
   let uppy = $state.raw(createUppyInstance());
-  let files = $state<FileWithProgress[]>([]);
-  let isUploading = $state(false);
   let storedFiles = $state<StoredFile[]>(data.files);
   let isDialogOpen = $state(false);
   let selectedImage = $state<{ url: string; filename: string } | null>(null);
 
-  let triggerFileSelect: (() => void) | null = null;
+  let inputElement = $state<HTMLInputElement | null>(null);
 
   // Check if file is an image
   function isImageFile(contentType: string | null): boolean {
@@ -325,18 +257,6 @@
       allFiles.forEach((file) => uppy.removeFile(file.id));
     };
   });
-
-  function handleStartUpload() {
-    uppy.upload();
-  }
-
-  function handleRemoveFile(fileId: string) {
-    uppy.removeFile(fileId);
-  }
-
-  function handleSelectFiles() {
-    triggerFileSelect?.();
-  }
 </script>
 
 <svelte:head>
@@ -351,53 +271,27 @@
 {#key data.workspace.id}
   <div class="flex flex-col items-center h-full p-6 gap-8">
     <UppyContextProvider {uppy}>
-      {#if storedFiles.length === 0}
-        <!-- Empty state - centered with no header -->
-        <FileInput
-          {files}
-          {isUploading}
-          onRemove={handleRemoveFile}
-          onStartUpload={handleStartUpload}
-          openFileDialog={(fn) => (triggerFileSelect = fn)}
-        />
-      {:else}
+      <DropzoneWrapper>
         <div class="w-full max-w-6xl mx-auto">
-          <div class="mb-6 flex items-end justify-between">
-            <div>
-              <h2 class="text-2xl font-semibold tracking-tight mb-2">Files</h2>
-              <p class="text-muted-foreground">
-                Organize and manage files for this workspace.
-              </p>
-            </div>
-            <Button variant="outline" onclick={handleSelectFiles} size="sm">
-              <Upload class="h-4 w-4 mr-2" />
-              Add Files
-            </Button>
-          </div>
-
-          <!-- File upload section -->
-          {#if files.length > 0}
-            <div class="mb-6">
-              <FileInput
-                {files}
-                {isUploading}
-                onRemove={handleRemoveFile}
-                onStartUpload={handleStartUpload}
-                openFileDialog={(fn) => (triggerFileSelect = fn)}
-              />
-            </div>
-          {:else}
-            <!-- Hidden FileInput for file selection -->
-            <div class="hidden">
-              <FileInput
-                {files}
-                {isUploading}
-                onRemove={handleRemoveFile}
-                onStartUpload={handleStartUpload}
-                openFileDialog={(fn) => (triggerFileSelect = fn)}
-              />
-            </div>
-          {/if}
+          <!-- Hidden file input -->
+          <input
+            bind:this={inputElement}
+            type="file"
+            multiple
+            class="hidden"
+            onchange={(e) => {
+              const files = e.currentTarget.files;
+              if (files) {
+                Array.from(files).forEach((file) => {
+                  uppy.addFile({
+                    name: file.name,
+                    type: file.type,
+                    data: file,
+                  });
+                });
+              }
+            }}
+          />
 
           <!-- Files table -->
           <FileTable
@@ -406,10 +300,10 @@
             onDownload={handleDownloadFile}
             onPreview={handleFileClick}
             onRename={openRenameDialog}
-            onAddFiles={handleSelectFiles}
+            onAddFiles={() => inputElement?.click()}
           />
         </div>
-      {/if}
+      </DropzoneWrapper>
     </UppyContextProvider>
 
     <!-- Image Preview Dialog -->

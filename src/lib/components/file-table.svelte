@@ -16,10 +16,11 @@
     Video,
     MoreHorizontal,
     Pencil,
-    CloudUpload,
+    Upload,
   } from "@lucide/svelte";
   import prettyBytes from "pretty-bytes";
   import type { File } from "$lib/server/db/schema";
+  import { useFileInput } from "@uppy/svelte";
 
   type StoredFile = Pick<
     File,
@@ -39,7 +40,7 @@
     onDownload: (id: string, name: string) => void;
     onPreview: (file: StoredFile) => void;
     onRename: (id: string, currentName: string) => void;
-    onAddFiles?: () => void;
+    onAddFiles: () => void;
   } = $props();
 
   function getFileIcon(contentType: string | null) {
@@ -90,9 +91,28 @@
       contentType.startsWith("image/") || contentType === "application/pdf"
     );
   }
+
+  const { getButtonProps, getInputProps } = useFileInput({
+    multiple: true,
+  });
 </script>
 
 <div class="space-y-4">
+  <!-- Heading and Action Button -->
+  <div class="flex items-end justify-between">
+    <div>
+      <h2 class="text-2xl font-semibold tracking-tight mb-2">Files</h2>
+      <p class="text-muted-foreground">
+        Organize and manage files for this workspace.
+      </p>
+    </div>
+    <input class="hidden" {...getInputProps()} />
+    <Button variant="outline" size="sm" {...getButtonProps()}>
+      <Upload class="h-4 w-4 mr-2" />
+      Add Files
+    </Button>
+  </div>
+
   <!-- Table -->
   <div class="w-full overflow-hidden rounded-lg border bg-card">
     <Table.Root>
