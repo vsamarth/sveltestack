@@ -10,7 +10,10 @@
 
 <svelte:head>
   <title>Workspaces | {siteConfig.name}</title>
-  <meta name="description" content="Manage your workspaces and files securely from your {siteConfig.name} dashboard." />
+  <meta
+    name="description"
+    content="Manage your workspaces and files securely from your {siteConfig.name} dashboard."
+  />
 </svelte:head>
 
 <div class="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">

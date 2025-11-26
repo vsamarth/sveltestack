@@ -18,10 +18,16 @@
 <svelte:head>
   <title>{siteConfig.name} - Secure File Storage</title>
   <meta name="description" content={siteConfig.description} />
-  <meta property="og:title" content="{siteConfig.name} - Secure File Storage & Workspace Management" />
+  <meta
+    property="og:title"
+    content="{siteConfig.name} - Secure File Storage & Workspace Management"
+  />
   <meta property="og:description" content={siteConfig.description} />
   <meta property="og:url" content={siteConfig.url} />
-  <meta name="twitter:title" content="{siteConfig.name} - Secure File Storage & Workspace Management" />
+  <meta
+    name="twitter:title"
+    content="{siteConfig.name} - Secure File Storage & Workspace Management"
+  />
   <meta name="twitter:description" content={siteConfig.description} />
   <link rel="canonical" href={siteConfig.url} />
 </svelte:head>

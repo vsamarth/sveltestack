@@ -5,7 +5,10 @@
 
 <svelte:head>
   <title>Sign In | {siteConfig.name}</title>
-  <meta name="description" content="Sign in to your {siteConfig.name} account to securely access your workspaces and files." />
+  <meta
+    name="description"
+    content="Sign in to your {siteConfig.name} account to securely access your workspaces and files."
+  />
 </svelte:head>
 
 <AuthForm mode="login" />

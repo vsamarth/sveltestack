@@ -5,7 +5,10 @@
 
 <svelte:head>
   <title>Sign Up | {siteConfig.name}</title>
-  <meta name="description" content="Create a new {siteConfig.name} account to start securely managing your files and workspaces." />
+  <meta
+    name="description"
+    content="Create a new {siteConfig.name} account to start securely managing your files and workspaces."
+  />
 </svelte:head>
 
 <AuthForm mode="signup" />

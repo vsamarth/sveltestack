@@ -25,7 +25,6 @@
     };
   };
 
-
   type StoredFile = Pick<
     File,
     "id" | "filename" | "size" | "contentType" | "createdAt"
@@ -342,7 +341,11 @@
 
 <svelte:head>
   <title>{data.workspace.name} | {siteConfig.name}</title>
-  <meta name="description" content="Securely manage files and uploads in the {data.workspace.name} workspace." />
+  <meta
+    name="description"
+    content="Securely manage files and uploads in the {data.workspace
+      .name} workspace."
+  />
 </svelte:head>
 
 {#key data.workspace.id}
@@ -359,15 +362,17 @@
         />
       {:else}
         <div class="w-full max-w-6xl mx-auto">
-          <div class="mb-6 flex items-center justify-between">
+          <div class="mb-6 flex items-end justify-between">
             <div>
-              <h2 class="text-2xl font-bold tracking-tight mb-2">
-                Uploaded Files
-              </h2>
+              <h2 class="text-2xl font-semibold tracking-tight mb-2">Files</h2>
               <p class="text-muted-foreground">
-                Manage your uploaded files for this workspace
+                Organize and manage files for this workspace.
               </p>
             </div>
+            <Button variant="outline" onclick={handleSelectFiles} size="sm">
+              <Upload class="h-4 w-4 mr-2" />
+              Add Files
+            </Button>
           </div>
 
           <!-- File upload section -->
@@ -393,23 +398,6 @@
               />
             </div>
           {/if}
-          <!-- Compact upload trigger above table -->
-          {#if files.length === 0}
-            <div
-              class="mb-6 flex items-center justify-between p-4 border rounded-lg border-dashed"
-            >
-              <div>
-                <p class="font-medium">Upload more files</p>
-                <p class="text-sm text-muted-foreground">
-                  Add additional files to this workspace
-                </p>
-              </div>
-              <Button onclick={handleSelectFiles}>
-                <Upload class="h-4 w-4 mr-2" />
-                Select Files
-              </Button>
-            </div>
-          {/if}
 
           <!-- Files table -->
           <FileTable
@@ -418,6 +406,7 @@
             onDownload={handleDownloadFile}
             onPreview={handleFileClick}
             onRename={openRenameDialog}
+            onAddFiles={handleSelectFiles}
           />
         </div>
       {/if}
@@ -516,7 +505,8 @@
           </Button>
           <Button
             onclick={confirmRenameFile}
-            disabled={!newFilename.trim() || newFilename.trim() === fileToRename?.name}
+            disabled={!newFilename.trim() ||
+              newFilename.trim() === fileToRename?.name}
           >
             Rename
           </Button>
