@@ -29,3 +29,18 @@ export const workspaceSchema = z.object({
 });
 
 export type WorkspaceSchema = z.infer<typeof workspaceSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .check(z.email("Invalid email address.")),
+});
+
+export type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
+export type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;

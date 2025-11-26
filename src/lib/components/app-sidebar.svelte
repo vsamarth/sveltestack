@@ -8,6 +8,7 @@
     PlusIcon,
     PencilIcon,
   } from "@lucide/svelte";
+  import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
   import { Button } from "$lib/components/ui/button";
   import * as DropdownMenu from "./ui/dropdown-menu";
   import * as Tooltip from "./ui/tooltip";
@@ -84,6 +85,16 @@
 </script>
 
 <Sidebar.Root {...restProps} bind:ref>
+  <Sidebar.Header>
+    <div class="flex items-center gap-2 px-2 py-2">
+      <div
+        class="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-md"
+      >
+        <GalleryVerticalEndIcon class="size-5" />
+      </div>
+      <span class="text-lg font-semibold">Vault</span>
+    </div>
+  </Sidebar.Header>
   <Sidebar.Content>
     <Sidebar.Group>
       <div class="flex items-center justify-between px-2 py-1.5">
