@@ -5,7 +5,19 @@ import VerifyEmail from "$lib/emails/verify-email";
 import ResetPassword from "$lib/emails/reset-password";
 import * as React from "react";
 
-const resend = new Resend(env.EMAIL_API_KEY);
+const resend = env.EMAIL_API_KEY ? new Resend(env.EMAIL_API_KEY) : null;
+
+export function isEmailConfigured(): boolean {
+  return !!(env.EMAIL_API_KEY && env.EMAIL_FROM);
+}
+
+export function checkEmailConfiguration(): void {
+  if (env.NODE_ENV === "production" && !isEmailConfigured()) {
+    console.warn(
+      "⚠️  Email functionality is disabled. EMAIL_API_KEY and EMAIL_FROM environment variables are not set. Email verification and password reset features will not work properly in production.",
+    );
+  }
+}
 
 export async function sendVerificationEmail({
   email,
@@ -16,13 +28,23 @@ export async function sendVerificationEmail({
   url: string;
   username?: string;
 }) {
+  if (!isEmailConfigured()) {
+    console.log("📧 [Email not configured] Verification email would be sent:", {
+      to: email,
+      subject: "Verify your email address",
+      url,
+      username,
+    });
+    return null;
+  }
+
   const html = await render(
     React.createElement(VerifyEmail, { url, username }),
   );
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: env.EMAIL_FROM,
+    const { data, error } = await resend!.emails.send({
+      from: env.EMAIL_FROM!,
       to: email,
       subject: "Verify your email address",
       html,
@@ -49,13 +71,26 @@ export async function sendResetPasswordEmail({
   url: string;
   username?: string;
 }) {
+  if (!isEmailConfigured()) {
+    console.log(
+      "📧 [Email not configured] Reset password email would be sent:",
+      {
+        to: email,
+        subject: "Reset your password",
+        url,
+        username,
+      },
+    );
+    return null;
+  }
+
   const html = await render(
     React.createElement(ResetPassword, { url, username }),
   );
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: env.EMAIL_FROM,
+    const { data, error } = await resend!.emails.send({
+      from: env.EMAIL_FROM!,
       to: email,
       subject: "Reset your password",
       html,
