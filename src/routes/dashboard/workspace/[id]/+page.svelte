@@ -110,7 +110,7 @@
   }
 
   let uppy = $state.raw(createUppyInstance());
-  let storedFiles = $state<StoredFile[]>(data.files);
+  let storedFiles = $derived(data.files);
   let isDialogOpen = $state(false);
   let selectedImage = $state<{ url: string; filename: string } | null>(null);
 
@@ -245,12 +245,9 @@
     }
   }
 
-  // Sync files with server data and cleanup
+  // Cleanup on workspace change or component unmount
   $effect(() => {
-    storedFiles = data.files;
-
     return () => {
-      // Cleanup on workspace change or component unmount
       uppy.cancelAll();
       uppy.clear();
       const allFiles = uppy.getFiles();

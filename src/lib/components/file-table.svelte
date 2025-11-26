@@ -21,6 +21,7 @@
   import prettyBytes from "pretty-bytes";
   import type { File } from "$lib/server/db/schema";
   import { useFileInput } from "@uppy/svelte";
+  import FilesEmptyState from "$lib/components/files-empty-state.svelte";
 
   type StoredFile = Pick<
     File,
@@ -33,12 +34,16 @@
     onDownload,
     onPreview,
     onRename,
+    disabled = false,
+    disabledMessage,
   }: {
     files: StoredFile[];
     onDelete: (id: string, name: string) => void;
     onDownload: (id: string, name: string) => void;
     onPreview: (file: StoredFile) => void;
     onRename: (id: string, currentName: string) => void;
+    disabled?: boolean;
+    disabledMessage?: string;
   } = $props();
 
   function getFileIcon(contentType: string | null) {
@@ -111,122 +116,129 @@
     </Button>
   </div>
 
-  <!-- Table -->
-  <div class="w-full overflow-hidden rounded-lg border bg-card">
-    <Table.Root>
-      <Table.Header>
-        <Table.Row class="hover:bg-transparent border-b-0 bg-muted/20">
-          <Table.Head class="w-12 pl-4 h-10"></Table.Head>
-          <Table.Head class="font-normal text-xs text-muted-foreground h-10"
-            >Name</Table.Head
-          >
-          <Table.Head
-            class="font-normal text-xs text-muted-foreground w-32 h-10"
-            >Type</Table.Head
-          >
-          <Table.Head
-            class="font-normal text-xs text-muted-foreground w-28 h-10"
-            >Size</Table.Head
-          >
-          <Table.Head
-            class="text-right font-normal text-xs text-muted-foreground pr-4 w-24 h-10"
-            >Actions</Table.Head
-          >
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
-        {#each files as file (file.id)}
-          {@const Icon = getFileIcon(file.contentType)}
-          {@const canPreview = isPreviewable(file.contentType)}
-          <Table.Row class="group hover:bg-muted/40 border-b last:border-b-0">
-            <Table.Cell class="py-3 pl-4">
-              <Icon class="h-4 w-4 text-muted-foreground" />
-            </Table.Cell>
-            <Table.Cell class="py-3">
-              <span
-                class="text-sm font-normal text-foreground truncate max-w-[250px] sm:max-w-[400px]"
-              >
-                {file.filename}
-              </span>
-            </Table.Cell>
-            <Table.Cell class="py-3">
-              <Badge variant="secondary" class="text-xs tracking-wide">
-                {getFileTypeLabel(file.contentType)}
-              </Badge>
-            </Table.Cell>
-            <Table.Cell class="py-3">
-              <span class="text-sm text-muted-foreground font-mono">
-                {prettyBytes(parseInt(file.size || "0"))}
-              </span>
-            </Table.Cell>
-            <Table.Cell class="py-3 pr-4 text-right">
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger>
-                  {#snippet child({ props })}
-                    <Button
-                      {...props}
-                      variant="ghost"
-                      size="icon"
-                      class="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <MoreHorizontal class="h-4 w-4" />
-                      <span class="sr-only">Actions</span>
-                    </Button>
-                  {/snippet}
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content align="end" class="w-40">
-                  {#if canPreview}
+  {#if files.length === 0}
+    <!-- Empty State -->
+    <FilesEmptyState {disabled} {disabledMessage} />
+  {:else}
+    <!-- Table -->
+    <div class="w-full overflow-hidden rounded-lg border bg-card">
+      <Table.Root class="table-fixed w-full">
+        <Table.Header>
+          <Table.Row class="hover:bg-transparent border-b-0 bg-muted/20">
+            <Table.Head class="w-12 pl-4 h-10"></Table.Head>
+            <Table.Head class="font-normal text-xs text-muted-foreground h-10"
+              >Name</Table.Head
+            >
+            <Table.Head
+              class="font-normal text-xs text-muted-foreground w-32 h-10"
+              >Type</Table.Head
+            >
+            <Table.Head
+              class="font-normal text-xs text-muted-foreground w-28 h-10"
+              >Size</Table.Head
+            >
+            <Table.Head
+              class="text-right font-normal text-xs text-muted-foreground pr-4 w-24 h-10"
+              >Actions</Table.Head
+            >
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each files as file (file.id)}
+            {@const Icon = getFileIcon(file.contentType)}
+            {@const canPreview = isPreviewable(file.contentType)}
+            <Table.Row class="group hover:bg-muted/40 border-b last:border-b-0">
+              <Table.Cell class="py-3 pl-4 w-12">
+                <Icon class="h-4 w-4 text-muted-foreground shrink-0" />
+              </Table.Cell>
+              <Table.Cell class="py-3 min-w-0 whitespace-normal">
+                <span
+                  class="text-sm font-normal text-foreground truncate block"
+                >
+                  {file.filename}
+                </span>
+              </Table.Cell>
+              <Table.Cell class="py-3 w-32">
+                <Badge variant="secondary" class="text-xs tracking-wide">
+                  {getFileTypeLabel(file.contentType)}
+                </Badge>
+              </Table.Cell>
+              <Table.Cell class="py-3 w-28">
+                <span
+                  class="text-sm text-muted-foreground font-mono whitespace-nowrap"
+                >
+                  {prettyBytes(parseInt(file.size || "0"))}
+                </span>
+              </Table.Cell>
+              <Table.Cell class="py-3 pr-4 text-right w-24">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    {#snippet child({ props })}
+                      <Button
+                        {...props}
+                        variant="ghost"
+                        size="icon"
+                        class="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <MoreHorizontal class="h-4 w-4" />
+                        <span class="sr-only">Actions</span>
+                      </Button>
+                    {/snippet}
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content align="end" class="w-40">
+                    {#if canPreview}
+                      <DropdownMenu.Item
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          onPreview(file);
+                        }}
+                        class="cursor-pointer text-sm"
+                      >
+                        <Eye class="mr-2 h-4 w-4" />
+                        <span>Preview</span>
+                      </DropdownMenu.Item>
+                    {/if}
                     <DropdownMenu.Item
                       onclick={(e) => {
                         e.stopPropagation();
-                        onPreview(file);
+                        onDownload(file.id, file.filename);
                       }}
                       class="cursor-pointer text-sm"
                     >
-                      <Eye class="mr-2 h-4 w-4" />
-                      <span>Preview</span>
+                      <Download class="mr-2 h-4 w-4" />
+                      <span>Download</span>
                     </DropdownMenu.Item>
-                  {/if}
-                  <DropdownMenu.Item
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      onDownload(file.id, file.filename);
-                    }}
-                    class="cursor-pointer text-sm"
-                  >
-                    <Download class="mr-2 h-4 w-4" />
-                    <span>Download</span>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      onRename(file.id, file.filename);
-                    }}
-                    class="cursor-pointer text-sm"
-                  >
-                    <Pencil class="mr-2 h-4 w-4" />
-                    <span>Rename</span>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Separator />
-                  <DropdownMenu.Item
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      onDelete(file.id, file.filename);
-                    }}
-                    class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
-                  >
-                    <Trash2 class="mr-2 h-4 w-4 text-destructive" />
-                    <span>Delete</span>
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Root>
-            </Table.Cell>
-          </Table.Row>
-        {/each}
-      </Table.Body>
-    </Table.Root>
-  </div>
+                    <DropdownMenu.Item
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        onRename(file.id, file.filename);
+                      }}
+                      class="cursor-pointer text-sm"
+                    >
+                      <Pencil class="mr-2 h-4 w-4" />
+                      <span>Rename</span>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Separator />
+                    <DropdownMenu.Item
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        onDelete(file.id, file.filename);
+                      }}
+                      class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
+                      <Trash2 class="mr-2 h-4 w-4 text-destructive" />
+                      <span>Delete</span>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    </div>
+  {/if}
 </div>
