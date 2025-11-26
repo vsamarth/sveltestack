@@ -13,6 +13,7 @@
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
   import FileTable from "$lib/components/file-table.svelte";
+  import { siteConfig } from "$lib/config";
 
   let { data }: { data: PageData } = $props();
 
@@ -23,6 +24,7 @@
       bytesTotal: number;
     };
   };
+
 
   type StoredFile = Pick<
     File,
@@ -337,6 +339,11 @@
     triggerFileSelect?.();
   }
 </script>
+
+<svelte:head>
+  <title>{data.workspace.name} | {siteConfig.name}</title>
+  <meta name="description" content="Securely manage files and uploads in the {data.workspace.name} workspace." />
+</svelte:head>
 
 {#key data.workspace.id}
   <div class="flex flex-col items-center h-full p-6 gap-8">

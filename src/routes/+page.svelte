@@ -12,14 +12,18 @@
     Palette,
     Zap,
   } from "@lucide/svelte";
+  import { siteConfig } from "$lib/config";
 </script>
 
 <svelte:head>
-  <title>SvelteStack - Production-Ready SvelteKit Starter Kit</title>
-  <meta
-    name="description"
-    content="Open-source, production-ready starter kit for SvelteKit. Complete with authentication, database, file storage, and a fully-functional demo app."
-  />
+  <title>{siteConfig.name} - Secure File Storage</title>
+  <meta name="description" content={siteConfig.description} />
+  <meta property="og:title" content="{siteConfig.name} - Secure File Storage & Workspace Management" />
+  <meta property="og:description" content={siteConfig.description} />
+  <meta property="og:url" content={siteConfig.url} />
+  <meta name="twitter:title" content="{siteConfig.name} - Secure File Storage & Workspace Management" />
+  <meta name="twitter:description" content={siteConfig.description} />
+  <link rel="canonical" href={siteConfig.url} />
 </svelte:head>
 
 <main class="min-h-screen">
@@ -40,10 +44,10 @@
 
     <div class="flex flex-col sm:flex-row gap-4 items-center justify-center">
       <Button href="/register" size="lg" class="text-base px-6 py-5 gap-2">
-        Try Vault Demo
+        Try {siteConfig.name} Demo
       </Button>
       <Button
-        href="https://github.com/vsamarth/sveltestack"
+        href={siteConfig.repository}
         variant="outline"
         size="lg"
         class="text-base px-6 py-5 gap-2"

@@ -12,7 +12,7 @@ Vault is the reference application included with SvelteStack, demonstrating how 
 
 **Authentication**
 
-- Email/password registration and login
+- Email/password registration and sign in
 - Secure password hashing with Argon2
 - Session management with better-auth
 
