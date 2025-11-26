@@ -7,6 +7,7 @@
   import type { File } from "$lib/server/db/schema";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
   import { Upload, X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
   import { enhance } from "$app/forms";
@@ -257,6 +258,13 @@
   let deleteDialogOpen = $state(false);
   let fileToDelete = $state<{ id: string; name: string } | null>(null);
 
+  let renameForm = $state<HTMLFormElement | null>(null);
+  let renameFileIdInput = $state<HTMLInputElement | null>(null);
+  let renameFilenameInput = $state<HTMLInputElement | null>(null);
+  let renameDialogOpen = $state(false);
+  let fileToRename = $state<{ id: string; name: string } | null>(null);
+  let newFilename = $state("");
+
   // Open delete confirmation dialog
   function openDeleteDialog(fileId: string, filename: string) {
     fileToDelete = { id: fileId, name: filename };
@@ -273,6 +281,34 @@
       });
       deleteDialogOpen = false;
       fileToDelete = null;
+    }
+  }
+
+  // Open rename dialog
+  function openRenameDialog(fileId: string, currentName: string) {
+    fileToRename = { id: fileId, name: currentName };
+    newFilename = currentName;
+    renameDialogOpen = true;
+  }
+
+  // Rename file after confirmation
+  function confirmRenameFile() {
+    if (
+      fileToRename &&
+      renameFileIdInput &&
+      renameFilenameInput &&
+      renameForm &&
+      newFilename.trim()
+    ) {
+      renameFileIdInput.value = fileToRename.id;
+      renameFilenameInput.value = newFilename.trim();
+      renameForm.requestSubmit();
+      toast.success("File renamed", {
+        description: `"${fileToRename.name}" → "${newFilename.trim()}"`,
+      });
+      renameDialogOpen = false;
+      fileToRename = null;
+      newFilename = "";
     }
   }
 
@@ -374,6 +410,7 @@
             onDelete={openDeleteDialog}
             onDownload={handleDownloadFile}
             onPreview={handleFileClick}
+            onRename={openRenameDialog}
           />
         </div>
       {/if}
@@ -436,6 +473,50 @@
       </Dialog.Content>
     </Dialog.Root>
 
+    <!-- Rename File Dialog -->
+    <Dialog.Root bind:open={renameDialogOpen}>
+      <Dialog.Content class="sm:max-w-md">
+        <Dialog.Header>
+          <Dialog.Title>Rename File</Dialog.Title>
+          <Dialog.Description>
+            Enter a new name for
+            <span class="font-semibold">{fileToRename?.name}</span>
+          </Dialog.Description>
+        </Dialog.Header>
+        <div class="py-4">
+          <Input
+            bind:value={newFilename}
+            placeholder="Enter new filename"
+            class="w-full"
+            onkeydown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                confirmRenameFile();
+              }
+            }}
+          />
+        </div>
+        <Dialog.Footer class="gap-2">
+          <Button
+            variant="outline"
+            onclick={() => {
+              renameDialogOpen = false;
+              fileToRename = null;
+              newFilename = "";
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onclick={confirmRenameFile}
+            disabled={!newFilename.trim() || newFilename.trim() === fileToRename?.name}
+          >
+            Rename
+          </Button>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog.Root>
+
     <!-- Hidden form for delete action -->
     <form
       bind:this={deleteForm}
@@ -445,6 +526,18 @@
       class="hidden"
     >
       <input bind:this={fileIdInput} type="hidden" name="fileId" />
+    </form>
+
+    <!-- Hidden form for rename action -->
+    <form
+      bind:this={renameForm}
+      method="POST"
+      action="?/renameFile"
+      use:enhance
+      class="hidden"
+    >
+      <input bind:this={renameFileIdInput} type="hidden" name="fileId" />
+      <input bind:this={renameFilenameInput} type="hidden" name="newFilename" />
     </form>
   </div>
 {/key}

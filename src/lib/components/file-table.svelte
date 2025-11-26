@@ -15,6 +15,7 @@
     Music,
     Video,
     MoreHorizontal,
+    Pencil,
   } from "@lucide/svelte";
   import prettyBytes from "pretty-bytes";
   import type { File } from "$lib/server/db/schema";
@@ -29,11 +30,13 @@
     onDelete,
     onDownload,
     onPreview,
+    onRename,
   }: {
     files: StoredFile[];
     onDelete: (id: string, name: string) => void;
     onDownload: (id: string, name: string) => void;
     onPreview: (file: StoredFile) => void;
+    onRename: (id: string, currentName: string) => void;
   } = $props();
 
   function getFileIcon(contentType: string | null) {
@@ -78,26 +81,6 @@
     return "File";
   }
 
-
-
-  function getIconColor(contentType: string | null) {
-    if (!contentType) return "text-muted-foreground";
-    if (contentType.startsWith("image/")) return "text-blue-500";
-    if (contentType === "application/pdf") return "text-red-500";
-    if (contentType.startsWith("video/")) return "text-purple-500";
-    if (contentType.startsWith("audio/")) return "text-green-500";
-    if (contentType.includes("zip") || contentType.includes("rar") || contentType.includes("tar"))
-      return "text-orange-500";
-    if (
-      contentType.includes("json") ||
-      contentType.includes("javascript") ||
-      contentType.includes("html") ||
-      contentType.includes("css")
-    )
-      return "text-yellow-500";
-    return "text-muted-foreground";
-  }
-
   function isPreviewable(contentType: string | null) {
     if (!contentType) return false;
     return (
@@ -121,7 +104,6 @@
       {#each files as file (file.id)}
         {@const Icon = getFileIcon(file.contentType)}
         {@const canPreview = isPreviewable(file.contentType)}
-        {@const iconColor = getIconColor(file.contentType)}
         <Table.Row
           class="group hover:bg-muted/40 border-b last:border-b-0"
         >
@@ -183,6 +165,16 @@
                 >
                   <Download class="mr-2 h-4 w-4" />
                   <span>Download</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    onRename(file.id, file.filename);
+                  }}
+                  class="cursor-pointer text-sm"
+                >
+                  <Pencil class="mr-2 h-4 w-4" />
+                  <span>Rename</span>
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator />
                 <DropdownMenu.Item
