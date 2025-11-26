@@ -1,0 +1,205 @@
+<script lang="ts">
+  import * as Table from "$lib/components/ui/table";
+  import { Button } from "$lib/components/ui/button";
+  import { Badge } from "$lib/components/ui/badge";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import {
+    FileIcon,
+    Download,
+    Trash2,
+    Eye,
+    FileText,
+    Image as ImageIcon,
+    FileCode,
+    FileArchive,
+    Music,
+    Video,
+    MoreHorizontal,
+  } from "@lucide/svelte";
+  import prettyBytes from "pretty-bytes";
+  import type { File } from "$lib/server/db/schema";
+
+  type StoredFile = Pick<
+    File,
+    "id" | "filename" | "size" | "contentType" | "createdAt"
+  >;
+
+  let {
+    files,
+    onDelete,
+    onDownload,
+    onPreview,
+  }: {
+    files: StoredFile[];
+    onDelete: (id: string, name: string) => void;
+    onDownload: (id: string, name: string) => void;
+    onPreview: (file: StoredFile) => void;
+  } = $props();
+
+  function getFileIcon(contentType: string | null) {
+    if (!contentType) return FileIcon;
+    if (contentType.startsWith("image/")) return ImageIcon;
+    if (contentType.startsWith("video/")) return Video;
+    if (contentType.startsWith("audio/")) return Music;
+    if (contentType === "application/pdf") return FileText;
+    if (
+      contentType.includes("zip") ||
+      contentType.includes("tar") ||
+      contentType.includes("rar")
+    )
+      return FileArchive;
+    if (
+      contentType.includes("json") ||
+      contentType.includes("xml") ||
+      contentType.includes("javascript") ||
+      contentType.includes("html") ||
+      contentType.includes("css")
+    )
+      return FileCode;
+    return FileIcon;
+  }
+
+  function getFileTypeLabel(contentType: string | null) {
+    if (!contentType) return "Unknown";
+    if (contentType.startsWith("image/")) return "Image";
+    if (contentType === "application/pdf") return "PDF";
+    if (contentType.startsWith("video/")) return "Video";
+    if (contentType.startsWith("audio/")) return "Audio";
+    if (contentType.includes("zip")) return "ZIP";
+    if (contentType.includes("rar")) return "RAR";
+    if (contentType.includes("tar")) return "TAR";
+    if (contentType.includes("json")) return "JSON";
+    if (contentType.includes("javascript")) return "JS";
+    if (contentType.includes("html")) return "HTML";
+    if (contentType.includes("css")) return "CSS";
+    if (contentType.includes("xml")) return "XML";
+    if (contentType.includes("text")) return "Text";
+    if (contentType.includes("document")) return "Document";
+    return "File";
+  }
+
+
+
+  function getIconColor(contentType: string | null) {
+    if (!contentType) return "text-muted-foreground";
+    if (contentType.startsWith("image/")) return "text-blue-500";
+    if (contentType === "application/pdf") return "text-red-500";
+    if (contentType.startsWith("video/")) return "text-purple-500";
+    if (contentType.startsWith("audio/")) return "text-green-500";
+    if (contentType.includes("zip") || contentType.includes("rar") || contentType.includes("tar"))
+      return "text-orange-500";
+    if (
+      contentType.includes("json") ||
+      contentType.includes("javascript") ||
+      contentType.includes("html") ||
+      contentType.includes("css")
+    )
+      return "text-yellow-500";
+    return "text-muted-foreground";
+  }
+
+  function isPreviewable(contentType: string | null) {
+    if (!contentType) return false;
+    return (
+      contentType.startsWith("image/") || contentType === "application/pdf"
+    );
+  }
+</script>
+
+<div class="w-full overflow-hidden rounded-lg border bg-card">
+  <Table.Root>
+    <Table.Header>
+      <Table.Row class="hover:bg-transparent border-b">
+        <Table.Head class="w-12 pl-4"></Table.Head>
+        <Table.Head class="font-medium text-muted-foreground">Name</Table.Head>
+        <Table.Head class="font-medium text-muted-foreground w-32">Type</Table.Head>
+        <Table.Head class="font-medium text-muted-foreground w-28">Size</Table.Head>
+        <Table.Head class="text-right font-medium text-muted-foreground pr-4 w-24">Actions</Table.Head>
+      </Table.Row>
+    </Table.Header>
+    <Table.Body>
+      {#each files as file (file.id)}
+        {@const Icon = getFileIcon(file.contentType)}
+        {@const canPreview = isPreviewable(file.contentType)}
+        {@const iconColor = getIconColor(file.contentType)}
+        <Table.Row
+          class="group hover:bg-muted/40 border-b last:border-b-0"
+        >
+          <Table.Cell class="py-3 pl-4">
+            <Icon class="h-4 w-4 text-muted-foreground" />
+          </Table.Cell>
+          <Table.Cell class="py-3">
+            <span class="text-sm font-normal text-foreground truncate max-w-[250px] sm:max-w-[400px]">
+              {file.filename}
+            </span>
+          </Table.Cell>
+          <Table.Cell class="py-3">
+            <Badge variant="secondary" class="text-xs tracking-wide">
+              {getFileTypeLabel(file.contentType)}
+            </Badge>
+          </Table.Cell>
+          <Table.Cell class="py-3">
+            <span class="text-sm text-muted-foreground font-mono">
+              {prettyBytes(parseInt(file.size || "0"))}
+            </span>
+          </Table.Cell>
+          <Table.Cell class="py-3 pr-4 text-right">
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                {#snippet child({ props })}
+                  <Button
+                    {...props}
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <MoreHorizontal class="h-4 w-4" />
+                    <span class="sr-only">Actions</span>
+                  </Button>
+                {/snippet}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end" class="w-40">
+                {#if canPreview}
+                  <DropdownMenu.Item
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      onPreview(file);
+                    }}
+                    class="cursor-pointer text-sm"
+                  >
+                    <Eye class="mr-2 h-4 w-4" />
+                    <span>Preview</span>
+                  </DropdownMenu.Item>
+                {/if}
+                <DropdownMenu.Item
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    onDownload(file.id, file.filename);
+                  }}
+                  class="cursor-pointer text-sm"
+                >
+                  <Download class="mr-2 h-4 w-4" />
+                  <span>Download</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    onDelete(file.id, file.filename);
+                  }}
+                  class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <Trash2 class="mr-2 h-4 w-4 text-destructive" />
+                  <span>Delete</span>
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </Table.Cell>
+        </Table.Row>
+      {/each}
+    </Table.Body>
+  </Table.Root>
+</div>

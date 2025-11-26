@@ -5,14 +5,13 @@
   import AwsS3 from "@uppy/aws-s3";
   import type { PageData } from "./$types";
   import type { File } from "$lib/server/db/schema";
-  import * as Table from "$lib/components/ui/table";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
-  import { Trash2, Download, FileIcon, Upload, X } from "@lucide/svelte";
+  import { Upload, X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
   import { enhance } from "$app/forms";
-  import prettyBytes from "pretty-bytes";
   import { toast } from "svelte-sonner";
+  import FileTable from "$lib/components/file-table.svelte";
 
   let { data }: { data: PageData } = $props();
 
@@ -253,8 +252,8 @@
     }
   }
 
-  let deleteForm: HTMLFormElement;
-  let fileIdInput: HTMLInputElement;
+  let deleteForm = $state<HTMLFormElement | null>(null);
+  let fileIdInput = $state<HTMLInputElement | null>(null);
   let deleteDialogOpen = $state(false);
   let fileToDelete = $state<{ id: string; name: string } | null>(null);
 
@@ -266,7 +265,7 @@
 
   // Delete file after confirmation
   function confirmDeleteFile() {
-    if (fileToDelete) {
+    if (fileToDelete && fileIdInput && deleteForm) {
       fileIdInput.value = fileToDelete.id;
       deleteForm.requestSubmit();
       toast.success("File deleted", {
@@ -370,92 +369,12 @@
           {/if}
 
           <!-- Files table -->
-          <div class="rounded-lg border bg-card">
-            <Table.Root>
-              <Table.Header>
-                <Table.Row>
-                  <Table.Head class="w-12"></Table.Head>
-                  <Table.Head class="font-semibold">Name</Table.Head>
-                  <Table.Head class="font-semibold">Type</Table.Head>
-                  <Table.Head class="font-semibold">Size</Table.Head>
-                  <Table.Head class="font-semibold">Uploaded</Table.Head>
-                  <Table.Head class="text-right font-semibold"
-                    >Actions</Table.Head
-                  >
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {#each storedFiles as file (file.id)}
-                  <Table.Row
-                    class="hover:bg-muted/50 {isImageFile(file.contentType) ||
-                    isPdfFile(file.contentType)
-                      ? 'cursor-pointer'
-                      : ''}"
-                    onclick={(e) => {
-                      // Only open preview if clicking on the row, not buttons
-                      if (!(e.target as HTMLElement).closest("button")) {
-                        handleFileClick(file);
-                      }
-                    }}
-                  >
-                    <Table.Cell class="py-3">
-                      <div
-                        class="flex items-center justify-center w-8 h-8 rounded bg-muted"
-                      >
-                        <FileIcon class="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </Table.Cell>
-                    <Table.Cell class="font-medium">
-                      {file.filename}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <span class="text-sm text-muted-foreground">
-                        {file.contentType || "Unknown"}
-                      </span>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <span class="text-sm text-muted-foreground">
-                        {prettyBytes(parseInt(file.size || "0"))}
-                      </span>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <span class="text-sm text-muted-foreground">
-                        {new Date(file.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </Table.Cell>
-                    <Table.Cell class="text-right">
-                      <div class="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="h-8 w-8"
-                          onclick={() =>
-                            handleDownloadFile(file.id, file.filename)}
-                        >
-                          <Download class="h-4 w-4" />
-                          <span class="sr-only">Download {file.filename}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="h-8 w-8"
-                          onclick={() =>
-                            openDeleteDialog(file.id, file.filename)}
-                        >
-                          <Trash2 class="h-4 w-4" />
-                          <span class="sr-only">Delete {file.filename}</span>
-                        </Button>
-                      </div>
-                    </Table.Cell>
-                  </Table.Row>
-                {/each}
-              </Table.Body>
-            </Table.Root>
-          </div>
+          <FileTable
+            files={storedFiles}
+            onDelete={openDeleteDialog}
+            onDownload={handleDownloadFile}
+            onPreview={handleFileClick}
+          />
         </div>
       {/if}
     </UppyContextProvider>
