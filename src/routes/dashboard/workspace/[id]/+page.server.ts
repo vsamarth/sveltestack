@@ -3,6 +3,7 @@ import {
   getWorkspaceFiles,
   deleteFile,
   getFileById,
+  renameFile,
 } from "$lib/server/db/file";
 import type { Actions, PageServerLoad } from "./$types";
 import { error, fail } from "@sveltejs/kit";
@@ -60,6 +61,43 @@ export const actions: Actions = {
     } catch (err) {
       console.error("Delete file error:", err);
       return fail(500, { error: "Failed to delete file" });
+    }
+  },
+
+  renameFile: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: "Unauthorized" });
+    }
+
+    const formData = await request.formData();
+    const fileId = formData.get("fileId") as string;
+    const newFilename = formData.get("newFilename") as string;
+
+    if (!fileId) {
+      return fail(400, { error: "File ID is required" });
+    }
+
+    if (!newFilename || newFilename.trim() === "") {
+      return fail(400, { error: "New filename is required" });
+    }
+
+    try {
+      // Get file and verify workspace ownership
+      const file = await getFileById(fileId);
+      if (!file) {
+        return fail(404, { error: "File not found" });
+      }
+
+      const workspace = await getWorkspaceById(file.workspaceId);
+      if (!workspace || workspace.ownerId !== locals.user.id) {
+        return fail(403, { error: "Forbidden" });
+      }
+
+      await renameFile(fileId, newFilename.trim());
+      return { success: true };
+    } catch (err) {
+      console.error("Rename file error:", err);
+      return fail(500, { error: "Failed to rename file" });
     }
   },
 };

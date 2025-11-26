@@ -29,26 +29,45 @@
     onStartUpload: () => void;
     isUploading: boolean;
     openFileDialog?: (openFn: () => void) => void;
+    enableDropzone?: boolean;
   }
 
-  let { files, onRemove, onStartUpload, isUploading, openFileDialog }: Props =
-    $props();
+  let {
+    files,
+    onRemove,
+    onStartUpload,
+    isUploading,
+    openFileDialog,
+    enableDropzone = true,
+  }: Props = $props();
 
   let isDragging = $state(false);
   let inputElement: HTMLInputElement;
 
+  const hasFiles = $derived(files.length > 0);
+  const gridCols = $derived(files.length === 1 ? "grid-cols-1" : "grid-cols-2");
+  const totalSize = $derived(
+    files.reduce((acc, file) => acc + (file.size ?? 0), 0),
+  );
+
   const { getRootProps, getInputProps } = useDropzone({
     noClick: true,
     onDragOver: () => {
-      isDragging = true;
+      if (enableDropzone) isDragging = true;
     },
     onDragLeave: () => {
-      isDragging = false;
+      if (enableDropzone) isDragging = false;
     },
     onDrop: () => {
-      isDragging = false;
+      if (enableDropzone) isDragging = false;
     },
   });
+
+  function handleCardClick() {
+    if (!hasFiles && inputElement) {
+      inputElement.click();
+    }
+  }
 
   function getFileIcon(file: FileWithProgress) {
     const error = file.error;
@@ -68,12 +87,6 @@
     return "text-muted-foreground";
   }
 
-  const hasFiles = $derived(files.length > 0);
-  const gridCols = $derived(files.length === 1 ? "grid-cols-1" : "grid-cols-2");
-  const totalSize = $derived(
-    files.reduce((acc, file) => acc + (file.size ?? 0), 0),
-  );
-
   $effect(() => {
     if (openFileDialog && inputElement) {
       openFileDialog(() => inputElement.click());
@@ -82,17 +95,19 @@
 </script>
 
 {#snippet emptyState()}
-  <Card.Content>
-    <div class="flex flex-col items-center gap-2 text-center">
-      <div class={emptyMediaVariants({ variant: "icon" })}>
-        <CloudIcon />
-      </div>
-      <div class="text-lg font-medium tracking-tight">Nothing here yet</div>
-      <div class="text-muted-foreground text-sm/relaxed">
-        Start by uploading your files to this workspace.
-      </div>
+  <div class="flex flex-col items-center gap-2 text-center">
+    <div class={emptyMediaVariants({ variant: "icon" })}>
+      <CloudIcon />
     </div>
-  </Card.Content>
+    <div class="text-lg font-medium tracking-tight">
+      {isDragging ? "Drop files here" : "Nothing here yet"}
+    </div>
+    <div class="text-muted-foreground text-sm/relaxed">
+      {isDragging
+        ? "Release to add files to this workspace"
+        : "Drag and drop files here or click to browse"}
+    </div>
+  </div>
 {/snippet}
 
 {#snippet fileCard(file: FileWithProgress)}
@@ -151,14 +166,31 @@
 {/snippet}
 
 <Card.Root
-  class="border-dashed border-2 transition-colors shadow-none w-full max-w-lg {isDragging
-    ? 'border-primary/20 bg-muted/5'
+  class="transition-colors shadow-none w-full {isDragging
+    ? 'border-dashed border-2 border-primary'
     : hasFiles
       ? 'border-transparent'
-      : 'border-transparent'} {hasFiles ? 'p-6' : 'p-12'}"
-  {...getRootProps()}
+      : 'border-transparent'} {hasFiles
+    ? 'p-6 max-w-lg'
+    : 'p-12 h-full flex items-center justify-center'} {!hasFiles
+    ? 'cursor-pointer hover:bg-muted/20'
+    : ''}"
+  {...enableDropzone ? getRootProps() : {}}
+  onclick={handleCardClick}
+  role={hasFiles ? undefined : "button"}
+  tabindex={hasFiles ? undefined : 0}
+  onkeydown={(e) => {
+    if (!hasFiles && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      handleCardClick();
+    }
+  }}
 >
-  <input bind:this={inputElement} {...getInputProps()} class="hidden sr-only" />
+  <input
+    bind:this={inputElement}
+    {...enableDropzone ? getInputProps() : {}}
+    class="hidden sr-only"
+  />
 
   {#if hasFiles}
     <Card.Content class="grid {gridCols} gap-3">

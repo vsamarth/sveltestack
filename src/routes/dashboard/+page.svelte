@@ -3,9 +3,18 @@
   import WorkspaceFormDialog from "$lib/components/workspace-form-dialog.svelte";
   import { FolderIcon } from "@lucide/svelte";
   import { page } from "$app/state";
+  import { siteConfig } from "$lib/config";
 
   let createDialogOpen = $state(false);
 </script>
+
+<svelte:head>
+  <title>Workspaces | {siteConfig.name}</title>
+  <meta
+    name="description"
+    content="Manage your workspaces and files securely from your {siteConfig.name} dashboard."
+  />
+</svelte:head>
 
 <div class="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4">
   <div class="mx-auto flex max-w-md flex-col items-center text-center">

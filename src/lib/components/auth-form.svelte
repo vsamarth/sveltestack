@@ -16,6 +16,7 @@
   import { EyeIcon, EyeOffIcon } from "@lucide/svelte";
   import { authClient, getErrorMessage } from "$lib/auth-client";
   import * as Form from "$lib/components/ui/form";
+  import { siteConfig } from "$lib/config";
 
   interface Props extends HTMLAttributes<HTMLFormElement> {
     mode: "login" | "signup";
@@ -65,7 +66,7 @@
 
   const config = {
     login: {
-      title: "Sign in to your account",
+      title: `Sign in to ${siteConfig.name}`,
       titleClass: "text-2xl font-semibold tracking-tight",
       submitText: "Sign in",
       linkText: "Don't have an account?",
@@ -74,7 +75,7 @@
       description: undefined,
     },
     signup: {
-      title: "Create your account",
+      title: `Create your ${siteConfig.name} account`,
       titleClass: "text-2xl font-semibold tracking-tight",
       submitText: "Create Account",
       linkText: "Already have an account?",
