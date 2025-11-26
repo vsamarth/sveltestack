@@ -14,7 +14,6 @@
   let isResending = $state(false);
 
   async function resendVerification() {
-    // TODO: Implement resend verification email logic
     isResending = true;
     try {
       await authClient.sendVerificationEmail({
