@@ -253,8 +253,8 @@
     }
   }
 
-  let deleteForm: HTMLFormElement;
-  let fileIdInput: HTMLInputElement;
+  let deleteForm = $state.raw<HTMLFormElement | null>(null);
+  let fileIdInput = $state.raw<HTMLInputElement | null>(null);
   let deleteDialogOpen = $state(false);
   let fileToDelete = $state<{ id: string; name: string } | null>(null);
 
@@ -266,9 +266,9 @@
 
   // Delete file after confirmation
   function confirmDeleteFile() {
-    if (fileToDelete) {
+    if (fileToDelete && fileIdInput) {
       fileIdInput.value = fileToDelete.id;
-      deleteForm.requestSubmit();
+      deleteForm?.requestSubmit();
       toast.success("File deleted", {
         description: fileToDelete.name,
       });

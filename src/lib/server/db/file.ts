@@ -74,6 +74,15 @@ export async function deleteFile(fileId: string) {
   return deleted;
 }
 
+export async function renameFile(fileId: string, newFilename: string) {
+  const [updated] = await db
+    .update(file)
+    .set({ filename: newFilename, updatedAt: new Date() })
+    .where(eq(file.id, fileId))
+    .returning();
+  return updated;
+}
+
 export async function verifyUserOwnsFile(
   userId: string,
   fileId: string,
