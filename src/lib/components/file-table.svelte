@@ -33,14 +33,12 @@
     onDownload,
     onPreview,
     onRename,
-    onAddFiles,
   }: {
     files: StoredFile[];
     onDelete: (id: string, name: string) => void;
     onDownload: (id: string, name: string) => void;
     onPreview: (file: StoredFile) => void;
     onRename: (id: string, currentName: string) => void;
-    onAddFiles: () => void;
   } = $props();
 
   function getFileIcon(contentType: string | null) {

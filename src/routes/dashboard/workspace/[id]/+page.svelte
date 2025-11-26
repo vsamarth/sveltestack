@@ -92,7 +92,7 @@
       }
     });
 
-    instance.on("upload-error", (file, error) => {
+    instance.on("upload-error", (file) => {
       if (file) {
         toast.error("Upload failed", {
           description: file.name,
@@ -300,7 +300,6 @@
             onDownload={handleDownloadFile}
             onPreview={handleFileClick}
             onRename={openRenameDialog}
-            onAddFiles={() => inputElement?.click()}
           />
         </div>
       </DropzoneWrapper>
