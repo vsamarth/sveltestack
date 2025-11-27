@@ -39,15 +39,6 @@
       }
     ]
   },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,svelte}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,md,css,html,yml,yaml}": [
-      "prettier --write"
-    ]
-  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.937.0",
     "@aws-sdk/s3-request-presigner": "^3.937.0",
@@ -97,7 +88,6 @@
     "eslint-plugin-svelte": "^3.13.0",
     "globals": "^16.5.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
     "mode-watcher": "^1.1.0",
     "playwright": "^1.56.1",
     "prettier": "^3.6.2",
