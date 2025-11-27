@@ -10,7 +10,7 @@
   import { invalidateAll } from "$app/navigation";
   import { UserPlusIcon } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
-  import { sendInvite } from "$lib/remote/invite.remote";
+  import { sendInvite } from "$lib/remote/actions.remote";
 
   interface Props {
     open?: boolean;

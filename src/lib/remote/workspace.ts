@@ -41,16 +41,23 @@ export const updateWorkspace = command(
       error(401, "Unauthorized");
     }
 
+    // Check if workspace exists
+    const workspace = await getWorkspaceById(workspaceId);
+    if (!workspace) {
+      error(404, "Workspace not found");
+    }
+
+    // Check if user owns the workspace
+    if (!(await userOwnsWorkspace(workspaceId, locals.user.id))) {
+      error(403, "Forbidden");
+    }
+
     try {
-      if (await userOwnsWorkspace(workspaceId, locals.user.id)) {
-        const workspace = await updateWorkspaceDb(workspaceId, name);
-        return {
-          id: workspace.id,
-          name: workspace.name,
-        };
-      } else {
-        error(403, "Forbidden");
-      }
+      const updated = await updateWorkspaceDb(workspaceId, name);
+      return {
+        id: updated.id,
+        name: updated.name,
+      };
     } catch (err) {
       console.error("Failed to update workspace:", err);
       error(500, "Failed to update workspace");
@@ -125,3 +132,4 @@ export const setLastActiveWorkspace = command(
     }
   },
 );
+

@@ -26,16 +26,16 @@ export const sendInvite = command(
       error(401, "Unauthorized");
     }
 
+    // Get workspace details first to check if it exists
+    const workspace = await getWorkspaceById(workspaceId);
+    if (!workspace) {
+      error(404, "Workspace not found");
+    }
+
     // Check if user owns the workspace
     const isOwner = await userOwnsWorkspace(workspaceId, locals.user.id);
     if (!isOwner) {
       error(403, "Only workspace owners can invite members");
-    }
-
-    // Get workspace details
-    const workspace = await getWorkspaceById(workspaceId);
-    if (!workspace) {
-      error(404, "Workspace not found");
     }
 
     // Check if user is trying to invite themselves
@@ -190,3 +190,4 @@ export const removeMember = command(
     }
   },
 );
+

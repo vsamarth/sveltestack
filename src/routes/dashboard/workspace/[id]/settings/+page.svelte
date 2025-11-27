@@ -29,8 +29,9 @@
   import {
     updateWorkspace,
     deleteWorkspace,
-  } from "$lib/remote/workspace.remote";
-  import { cancelInvite, removeMember } from "$lib/remote/invite.remote";
+    cancelInvite,
+    removeMember,
+  } from "$lib/remote/actions.remote";
   import InviteMemberDialog from "$lib/components/invite-member-dialog.svelte";
 
   let { data }: { data: PageData } = $props();

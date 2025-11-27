@@ -7,6 +7,7 @@ import {
   createPendingFile,
   confirmFileUpload,
   verifyUserHasFileAccess,
+  getFileById,
 } from "$lib/server/db/file";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
 
@@ -80,6 +81,12 @@ export const confirmUpload = command(
       error(400, "File ID is required");
     }
 
+    // Check if file exists and user has access
+    const file = await getFileById(fileId);
+    if (!file) {
+      error(404, "File not found");
+    }
+
     // Verify user has access to the file's workspace (owner or member)
     const hasAccess = await verifyUserHasFileAccess(locals.user.id, fileId);
     if (!hasAccess) {
@@ -96,3 +103,4 @@ export const confirmUpload = command(
     return { success: true, file: updatedFile };
   },
 );
+

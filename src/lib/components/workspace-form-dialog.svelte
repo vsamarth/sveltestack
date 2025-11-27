@@ -14,7 +14,7 @@
   import {
     createWorkspace,
     updateWorkspace,
-  } from "$lib/remote/workspace.remote";
+  } from "$lib/remote/actions.remote";
 
   interface Props {
     open?: boolean;

@@ -22,8 +22,9 @@
     "lint": "prettier --check . && eslint .",
     "prepare": "husky",
     "preview": "vite preview",
-    "test": "vitest --run && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:e2e",
     "test:e2e": "playwright test",
+    "test:unit": "vitest --run",
     "test:watch": "vitest"
   },
   "prettier": {
