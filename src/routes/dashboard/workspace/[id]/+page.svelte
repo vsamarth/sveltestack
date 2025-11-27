@@ -9,7 +9,6 @@
   import { Input } from "$lib/components/ui/input";
   import { X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
-  import prettyBytes from "pretty-bytes";
   import { toast } from "svelte-sonner";
   import FileTable from "$lib/components/file-table.svelte";
   import { siteConfig } from "$lib/config";
@@ -47,7 +46,7 @@
             filename: file.name,
             contentType: file.type,
             workspaceId: data.workspace.id,
-            size: file.size,
+            size: file.size ?? undefined,
           });
 
           // Store fileId for confirmation
@@ -59,7 +58,7 @@
             responseData,
           );
           return {
-            method: responseData.method,
+            method: responseData.method as "PUT",
             url: responseData.url,
             headers: responseData.headers,
           };
@@ -73,7 +72,7 @@
     // Setup event listenersSetup event listeners
 
     instance.on("upload-success", async (file) => {
-      if (file && file.meta.fileId) {
+      if (file && file.meta.fileId && typeof file.meta.fileId === "string") {
         try {
           // Confirm upload in database
           await confirmUpload({ fileId: file.meta.fileId });

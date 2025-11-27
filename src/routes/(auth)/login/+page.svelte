@@ -9,6 +9,7 @@
 
   type LoginFormData = z.infer<typeof loginSchema>;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleLogin(form: SuperValidated<LoginFormData, any>) {
     try {
       const { error } = await authClient.signIn.email({

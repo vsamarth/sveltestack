@@ -1,9 +1,10 @@
 <script lang="ts" generics="T extends z.ZodObject<any>">
+  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
   import { superForm, defaults } from "sveltekit-superforms";
   import { zod4 } from "sveltekit-superforms/adapters";
   import type { z } from "zod";
   import type { Snippet } from "svelte";
-  import type { SuperForm, SuperValidated } from "sveltekit-superforms";
+  import type { SuperValidated } from "sveltekit-superforms";
   import { cn } from "$lib/utils.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import {
@@ -209,7 +210,7 @@
       </div>
     {/if}
 
-    {#each Object.entries(fieldsConfig) as [fieldName, fieldConfig]}
+    {#each Object.entries(fieldsConfig) as [fieldName, fieldConfig] (fieldName)}
       {#if fieldConfig}
         {@const fieldType = fieldConfig.type?.toLowerCase()}
         {#if fieldType === "password"}

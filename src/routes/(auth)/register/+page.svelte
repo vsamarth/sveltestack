@@ -9,6 +9,7 @@
 
   type SignupFormData = z.infer<typeof signupSchema>;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleSignup(form: SuperValidated<SignupFormData, any>) {
     try {
       const { error } = await authClient.signUp.email({
@@ -41,7 +42,7 @@
 <AuthForm
   schema={signupSchema}
   onSubmit={handleSignup}
-  title={`Create your account`}
+  title="Create your account"
   submitText="Create Account"
   linkText="Already have an account?"
   linkLabel="Sign in"
