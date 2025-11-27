@@ -1,20 +1,10 @@
 import { db } from ".";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { userPreferences, workspace } from "./schema";
 
 export async function createDefaultWorkspace(userId: string) {
-  const newWorkspace = await db
-    .insert(workspace)
-    .values({
-      name: "Personal",
-      ownerId: userId,
-    })
-    .returning();
-
-  await db.insert(userPreferences).values({
-    userId,
-    lastWorkspaceId: newWorkspace[0].id,
-  });
+  const newWorkspace = await createWorkspace("Personal", userId);
+  await setLastActiveWorkspace(userId, newWorkspace.id);
 }
 
 export async function getWorkspaces(userId: string) {
@@ -32,6 +22,19 @@ export async function getWorkspaceById(workspaceId: string) {
     .where(eq(workspace.id, workspaceId))
     .limit(1)
     .then((rows) => rows[0]);
+}
+
+export async function userOwnsWorkspace(
+  workspaceId: string,
+  userId: string,
+): Promise<boolean> {
+  const result = await db
+    .select({ id: workspace.id })
+    .from(workspace)
+    .where(and(eq(workspace.id, workspaceId), eq(workspace.ownerId, userId)))
+    .limit(1);
+
+  return result.length > 0;
 }
 
 export async function createWorkspace(name: string, userId: string) {

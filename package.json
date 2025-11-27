@@ -16,13 +16,14 @@
     "db:start": "docker-compose up -d",
     "db:studio": "drizzle-kit studio",
     "dev": "vite dev",
-    "email:dev": "email dev --dir src/lib/emails",
     "email:build": "email build --dir src/lib/emails",
+    "email:dev": "email dev --dir src/lib/emails",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint .",
-    "prepare": "svelte-kit sync || echo ''",
+    "prepare": "husky",
     "preview": "vite preview",
-    "test": "vitest --run",
+    "test": "vitest --run && npm run test:e2e",
+    "test:e2e": "playwright test",
     "test:watch": "vitest"
   },
   "prettier": {
@@ -36,6 +37,15 @@
           "parser": "svelte"
         }
       }
+    ]
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,svelte}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,css,html,yml,yaml}": [
+      "prettier --write"
     ]
   },
   "dependencies": {
@@ -68,6 +78,7 @@
     "@eslint/compat": "^1.4.1",
     "@eslint/js": "^9.39.1",
     "@internationalized/date": "^3.10.0",
+    "@playwright/test": "^1.56.1",
     "@react-email/components": "^1.0.1",
     "@react-email/preview-server": "5.0.5",
     "@sveltejs/adapter-auto": "^7.0.0",
@@ -85,6 +96,8 @@
     "eslint": "^9.39.1",
     "eslint-plugin-svelte": "^3.13.0",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "mode-watcher": "^1.1.0",
     "playwright": "^1.56.1",
     "prettier": "^3.6.2",

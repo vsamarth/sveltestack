@@ -9,11 +9,20 @@
   import { Input } from "$lib/components/ui/input";
   import { X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
-  import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
   import FileTable from "$lib/components/file-table.svelte";
   import { siteConfig } from "$lib/config";
   import DropzoneWrapper from "$lib/components/dropzone-wrapper.svelte";
+  import {
+    getPresignedUploadUrlRemote,
+    confirmUpload,
+  } from "$lib/remote/upload.remote";
+  import {
+    deleteFile,
+    renameFile,
+    getFilePreviewUrl,
+    getFileDownloadUrl,
+  } from "$lib/remote/file.remote";
 
   let { data }: { data: PageData } = $props();
 
@@ -32,54 +41,45 @@
     }).use(AwsS3, {
       shouldUseMultipart: false,
       async getUploadParameters(file) {
-        const response = await fetch("/api/upload/presigned", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        try {
+          const responseData = await getPresignedUploadUrlRemote({
             filename: file.name,
             contentType: file.type,
             workspaceId: data.workspace.id,
-            size: file.size,
-          }),
-        });
+            size: typeof file.size === "number" ? file.size : undefined,
+          });
 
-        if (!response.ok) {
+          // Store fileId for confirmation
+          file.meta.fileId = responseData.fileId;
+
+          console.log(
+            "Upload parameters received for file:",
+            file.name,
+            responseData,
+          );
+          // Ensure the returned object matches AwsS3UploadParameters
+          return {
+            method: "PUT",
+            url: responseData.url,
+            headers: responseData.headers,
+            // 'fields' and 'expires' are optional, not needed for simple PUT
+          };
+        } catch (error) {
+          console.error("Failed to get upload URL:", error);
           throw new Error("Failed to get upload URL");
         }
-
-        const responseData = await response.json();
-
-        // Store fileId for confirmation
-        file.meta.fileId = responseData.fileId;
-
-        console.log(
-          "Upload parameters received for file:",
-          file.name,
-          responseData,
-        );
-        return {
-          method: responseData.method,
-          url: responseData.url,
-          headers: responseData.headers,
-        };
       },
     });
 
-    // Setup event listenersSetup event listeners
+    // Setup event listeners
 
     instance.on("upload-success", async (file) => {
-      if (file && file.meta.fileId) {
+      if (file && file.meta.fileId && typeof file.meta.fileId === "string") {
         try {
           // Confirm upload in database
-          await fetch("/api/upload/confirm", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileId: file.meta.fileId }),
+          await confirmUpload({
+            fileId: file.meta.fileId,
           });
-
-          // Reload files list from server
           await invalidateAll();
 
           toast.success("File uploaded", {
@@ -136,16 +136,7 @@
     if (!isImage && !isPdf) return;
 
     try {
-      const response = await fetch(
-        `/api/workspace/${data.workspace.id}/files/${file.id}/preview`,
-      );
-
-      if (!response.ok) {
-        console.error("Failed to get preview URL");
-        return;
-      }
-
-      const { url } = await response.json();
+      const { url } = await getFilePreviewUrl(file.id);
 
       if (isPdf) {
         // Open PDF in new tab
@@ -163,16 +154,7 @@
   // Download file
   async function handleDownloadFile(fileId: string, filename: string) {
     try {
-      const response = await fetch(
-        `/api/workspace/${data.workspace.id}/files/${fileId}/download`,
-      );
-
-      if (!response.ok) {
-        console.error("Failed to get download URL");
-        return;
-      }
-
-      const { url } = await response.json();
+      const { url } = await getFileDownloadUrl(fileId);
 
       // Create a temporary link and trigger download
       const link = document.createElement("a");
@@ -186,14 +168,9 @@
     }
   }
 
-  let deleteForm = $state<HTMLFormElement | null>(null);
-  let fileIdInput = $state<HTMLInputElement | null>(null);
   let deleteDialogOpen = $state(false);
   let fileToDelete = $state<{ id: string; name: string } | null>(null);
 
-  let renameForm = $state<HTMLFormElement | null>(null);
-  let renameFileIdInput = $state<HTMLInputElement | null>(null);
-  let renameFilenameInput = $state<HTMLInputElement | null>(null);
   let renameDialogOpen = $state(false);
   let fileToRename = $state<{ id: string; name: string } | null>(null);
   let newFilename = $state("");
@@ -205,15 +182,20 @@
   }
 
   // Delete file after confirmation
-  function confirmDeleteFile() {
-    if (fileToDelete && fileIdInput) {
-      fileIdInput.value = fileToDelete.id;
-      deleteForm?.requestSubmit();
+  async function confirmDeleteFile() {
+    if (!fileToDelete) return;
+
+    try {
+      await deleteFile(fileToDelete.id);
+      await invalidateAll();
       toast.success("File deleted", {
         description: fileToDelete.name,
       });
       deleteDialogOpen = false;
       fileToDelete = null;
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+      toast.error("Failed to delete file");
     }
   }
 
@@ -225,23 +207,24 @@
   }
 
   // Rename file after confirmation
-  function confirmRenameFile() {
-    if (
-      fileToRename &&
-      renameFileIdInput &&
-      renameFilenameInput &&
-      renameForm &&
-      newFilename.trim()
-    ) {
-      renameFileIdInput.value = fileToRename.id;
-      renameFilenameInput.value = newFilename.trim();
-      renameForm.requestSubmit();
+  async function confirmRenameFile() {
+    if (!fileToRename || !newFilename.trim()) return;
+
+    try {
+      await renameFile({
+        fileId: fileToRename.id,
+        newFilename: newFilename.trim(),
+      });
+      await invalidateAll();
       toast.success("File renamed", {
         description: `"${fileToRename.name}" → "${newFilename.trim()}"`,
       });
       renameDialogOpen = false;
       fileToRename = null;
       newFilename = "";
+    } catch (error) {
+      console.error("Failed to rename file:", error);
+      toast.error("Failed to rename file");
     }
   }
 
@@ -403,28 +386,5 @@
         </Dialog.Footer>
       </Dialog.Content>
     </Dialog.Root>
-
-    <!-- Hidden form for delete action -->
-    <form
-      bind:this={deleteForm}
-      method="POST"
-      action="?/deleteFile"
-      use:enhance
-      class="hidden"
-    >
-      <input bind:this={fileIdInput} type="hidden" name="fileId" />
-    </form>
-
-    <!-- Hidden form for rename action -->
-    <form
-      bind:this={renameForm}
-      method="POST"
-      action="?/renameFile"
-      use:enhance
-      class="hidden"
-    >
-      <input bind:this={renameFileIdInput} type="hidden" name="fileId" />
-      <input bind:this={renameFilenameInput} type="hidden" name="newFilename" />
-    </form>
   </div>
 {/key}

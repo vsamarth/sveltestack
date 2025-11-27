@@ -71,6 +71,9 @@ jobs:
           done
           exit 1
 
+      - name: Push database schema
+        run: bun run db:push --force
+
       - name: Wait for MinIO
         run: |
           for i in {1..30}; do
@@ -84,7 +87,7 @@ jobs:
           exit 1
 
       - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
+        run: npx playwright install --with-deps
 
       - name: Run tests
         run: bun run test
@@ -134,6 +137,9 @@ jobs:
             sleep 2
           done
           exit 1
+
+      - name: Push database schema
+        run: bun run db:push --force
 
       - name: Wait for MinIO
         run: |
