@@ -101,12 +101,13 @@
     <Form.Control>
       {#snippet children({ props })}
         <Form.Label>{label}</Form.Label>
+        <!-- prettier-ignore -->
         <Input
           {...props}
           {...inputProps}
           type={type as any}
           {autocomplete}
-          bind:value={$formData as any)[fieldName]}
+          bind:value={($formData as any)[fieldName]}
         />
       {/snippet}
     </Form.Control>
@@ -146,12 +147,13 @@
           {/if}
         </div>
         <InputGroup.Root>
+          <!-- prettier-ignore -->
           <InputGroup.Input
             {...props}
             {...inputProps}
             type={(showPassword ? "text" : type) as any}
             autocomplete={inputProps.autocomplete ?? "current-password"}
-            bind:value={$formData as any)[fieldName]}
+            bind:value={($formData as any)[fieldName]}
           />
           {#if ($formData as any)[fieldName]}
             <InputGroup.Addon

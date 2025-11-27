@@ -18,7 +18,10 @@
         callbackURL: "/dashboard",
       });
       if (error) {
-        const errorField = error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" ? "email" : "password";
+        const errorField =
+          error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+            ? "email"
+            : "password";
         setError(form, errorField, getErrorMessage(error.code ?? ""));
       }
     } catch {

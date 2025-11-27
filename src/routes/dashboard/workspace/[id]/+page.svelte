@@ -17,13 +17,13 @@
   import {
     getPresignedUploadUrlRemote,
     confirmUpload,
-  } from "$lib/remote/upload.remote";
+  } from "$lib/actions/upload.remote";
   import {
     deleteFile,
     renameFile,
     getFilePreviewUrl,
     getFileDownloadUrl,
-  } from "$lib/remote/file.remote";
+  } from "$lib/actions/file.remote";
 
   let { data }: { data: PageData } = $props();
 

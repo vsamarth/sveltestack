@@ -18,8 +18,8 @@
   import WorkspaceFormDialog from "./workspace-form-dialog.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
-  import { deleteWorkspace } from "$lib/remote/workspace.remote";
-    import { goto, invalidateAll } from "$app/navigation";
+  import { deleteWorkspace } from "$lib/actions/workspace.remote";
+  import { goto, invalidateAll } from "$app/navigation";
 
   type Props = ComponentProps<typeof Sidebar.Root> & {
     workspaces?: Workspace[];

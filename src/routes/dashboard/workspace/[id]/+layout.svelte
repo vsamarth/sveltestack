@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { setLastActiveWorkspace } from "$lib/remote/workspace.remote";
+  import { setLastActiveWorkspace } from "$lib/actions/workspace.remote";
 
   let lastTrackedId = $state<string | null>(null);
   let { children } = $props();

@@ -87,6 +87,3 @@ export async function setLastActiveWorkspace(
     .set({ lastWorkspaceId: workspaceId })
     .where(eq(userPreferences.userId, userId));
 }
-
-
-
