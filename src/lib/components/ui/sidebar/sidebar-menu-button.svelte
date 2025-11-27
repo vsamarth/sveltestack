@@ -75,7 +75,8 @@
   });
 </script>
 
-{#snippet Button({ props }: { props?: Record })}
+<!-- prettier-ignore -->
+{#snippet Button({ props }: { props?: Record<string, unknown> })}
   {@const mergedProps = mergeProps(buttonProps, props)}
   {#if child}
     {@render child({ props: mergedProps })}

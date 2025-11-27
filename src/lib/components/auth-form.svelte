@@ -83,9 +83,10 @@
   const { form: formData, enhance, delayed } = form;
 </script>
 
+<!-- prettier-ignore -->
 {#snippet standardField(
   fieldName: string,
-  fieldConfig: BaseFieldConfig & Record,
+  fieldConfig: BaseFieldConfig & Record<string, any>,
 )}
   {@const {
     label,
@@ -122,9 +123,10 @@
   </Form.Field>
 {/snippet}
 
+<!-- prettier-ignore -->
 {#snippet passwordField(
   fieldName: string,
-  fieldConfig: BaseFieldConfig & Record,
+  fieldConfig: BaseFieldConfig & Record<string, any>,
 )}
   {@const {
     label,
