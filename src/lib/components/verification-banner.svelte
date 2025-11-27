@@ -8,6 +8,7 @@
   import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
   import { authClient } from "$lib/auth-client";
   import Spinner from "./ui/spinner/spinner.svelte";
+  import { toast } from "svelte-sonner";
 
   let { email }: { email: string } = $props();
 
@@ -20,6 +21,9 @@
         email,
         callbackURL: "/dashboard",
       });
+      toast.success("Verification email sent. Check your inbox.");
+    } catch {
+      toast.error("Failed to send verification email. Please try again.");
     } finally {
       isResending = false;
     }
