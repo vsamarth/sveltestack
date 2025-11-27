@@ -11,11 +11,13 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   }
 
   // Get all workspaces (owned + member)
-  const { all: workspaces } = await getUserWorkspaces(locals.user.id);
+  const { owned: ownedWorkspaces, member: memberWorkspaces } =
+    await getUserWorkspaces(locals.user.id);
 
   return {
     user: locals.user,
-    workspaces,
+    ownedWorkspaces,
+    memberWorkspaces,
     workspaceForm: await superValidate(zod4(workspaceSchema)),
   };
 };

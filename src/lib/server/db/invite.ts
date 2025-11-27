@@ -109,6 +109,7 @@ export async function getInviteWithDetails(token: string) {
       workspaceName: workspace.name,
       inviterName: user.name,
       inviterEmail: user.email,
+      inviterImage: user.image,
     })
     .from(workspaceInvite)
     .innerJoin(workspace, eq(workspaceInvite.workspaceId, workspace.id))

@@ -18,13 +18,15 @@
   import type { WorkspaceSchema } from "$lib/validation";
 
   type Props = ComponentProps<typeof Sidebar.Root> & {
-    workspaces?: Workspace[];
+    ownedWorkspaces?: Workspace[];
+    memberWorkspaces?: Workspace[];
     user: User;
     workspaceForm?: SuperValidated<WorkspaceSchema>;
   };
 
   let {
-    workspaces = [],
+    ownedWorkspaces = [],
+    memberWorkspaces = [],
     user,
     workspaceForm,
     ref = $bindable(null),
@@ -81,9 +83,10 @@
     </div>
   </Sidebar.Header>
   <Sidebar.Content>
+    <!-- My Workspaces Section -->
     <Sidebar.Group>
       <div class="flex items-center justify-between px-2 py-1.5">
-        <Sidebar.GroupLabel class="text-xs">Workspaces</Sidebar.GroupLabel>
+        <Sidebar.GroupLabel class="text-xs">My Workspaces</Sidebar.GroupLabel>
         <Button
           variant="ghost"
           size="icon"
@@ -95,7 +98,7 @@
         </Button>
       </div>
       <Sidebar.Menu>
-        {#each workspaces as workspace (workspace.id)}
+        {#each ownedWorkspaces as workspace (workspace.id)}
           <Collapsible.Root
             open={expandedWorkspaces.has(workspace.id)}
             onOpenChange={() => toggleWorkspace(workspace.id)}
@@ -155,6 +158,61 @@
         {/each}
       </Sidebar.Menu>
     </Sidebar.Group>
+
+    <!-- Shared with me Section -->
+    {#if memberWorkspaces.length > 0}
+      <Sidebar.Group>
+        <div class="flex items-center justify-between px-2 py-1.5">
+          <Sidebar.GroupLabel class="text-xs">Shared with me</Sidebar.GroupLabel
+          >
+        </div>
+        <Sidebar.Menu>
+          {#each memberWorkspaces as workspace (workspace.id)}
+            <Collapsible.Root
+              open={expandedWorkspaces.has(workspace.id)}
+              onOpenChange={() => toggleWorkspace(workspace.id)}
+              class="group/collapsible"
+            >
+              <Sidebar.MenuItem>
+                <Collapsible.Trigger class="w-full">
+                  {#snippet child({ props })}
+                    <Sidebar.MenuButton
+                      {...props}
+                      isActive={isWorkspaceActive(workspace.id)}
+                      class="pr-2"
+                    >
+                      <ChevronRightIcon
+                        class="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                      />
+                      <span class="truncate">{workspace.name}</span>
+                    </Sidebar.MenuButton>
+                  {/snippet}
+                </Collapsible.Trigger>
+                <Collapsible.Content>
+                  <Sidebar.MenuSub>
+                    <Sidebar.MenuSubItem>
+                      <Sidebar.MenuSubButton
+                        isActive={isSubPageActive(workspace.id, "files")}
+                      >
+                        {#snippet child({ props })}
+                          <a
+                            href={`/dashboard/workspace/${workspace.id}/files`}
+                            {...props}
+                          >
+                            <FolderIcon class="h-4 w-4" />
+                            <span>Files</span>
+                          </a>
+                        {/snippet}
+                      </Sidebar.MenuSubButton>
+                    </Sidebar.MenuSubItem>
+                  </Sidebar.MenuSub>
+                </Collapsible.Content>
+              </Sidebar.MenuItem>
+            </Collapsible.Root>
+          {/each}
+        </Sidebar.Menu>
+      </Sidebar.Group>
+    {/if}
   </Sidebar.Content>
   <Sidebar.Footer>
     <NavUser {user} />

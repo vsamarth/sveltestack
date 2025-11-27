@@ -1,5 +1,10 @@
-import { getInviteWithDetails, acceptInvite } from "$lib/server/db/invite";
+import {
+  getInviteWithDetails,
+  acceptInvite,
+  cancelInvite,
+} from "$lib/server/db/invite";
 import { getWorkspaceById } from "$lib/server/db/workspace";
+import { getWorkspaceMembers } from "$lib/server/db/membership";
 import type { Actions, PageServerLoad } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
 
@@ -41,11 +46,18 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
     const emailMatches =
       locals.user.email.toLowerCase() === invite.email.toLowerCase();
 
+    // Get workspace member count for context
+    const members = await getWorkspaceMembers(invite.workspaceId);
+    const memberCount = members.length + 1; // +1 for owner
+
     return {
       invite: {
         workspaceName: invite.workspaceName,
         inviterName: invite.inviterName,
+        inviterImage: invite.inviterImage,
         email: invite.email,
+        createdAt: invite.createdAt,
+        memberCount,
       },
       user: locals.user,
       emailMatches,
@@ -54,11 +66,18 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
   }
 
   // Not logged in - show login prompt
+  // Get workspace member count for context
+  const members = await getWorkspaceMembers(invite.workspaceId);
+  const memberCount = members.length + 1; // +1 for owner
+
   return {
     invite: {
       workspaceName: invite.workspaceName,
       inviterName: invite.inviterName,
+      inviterImage: invite.inviterImage,
       email: invite.email,
+      createdAt: invite.createdAt,
+      memberCount,
     },
     user: null,
     emailMatches: false,
@@ -102,6 +121,45 @@ export const actions: Actions = {
 
       // Re-throw redirects
       throw err;
+    }
+  },
+  decline: async ({ params, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: "You must be logged in to decline an invite" });
+    }
+
+    const { token } = params;
+
+    try {
+      const invite = await getInviteWithDetails(token);
+
+      if (!invite) {
+        return fail(404, { error: "Invite not found" });
+      }
+
+      if (invite.status !== "pending") {
+        return fail(400, {
+          error: "This invite is no longer available to decline",
+        });
+      }
+
+      // Only allow declining if the invite email matches the user's email
+      // (or if they're logged in, they can decline any invite sent to them)
+      const emailMatches =
+        locals.user.email.toLowerCase() === invite.email.toLowerCase();
+      if (!emailMatches) {
+        return fail(403, {
+          error: "You can only decline invites sent to your email",
+        });
+      }
+
+      // Cancel the invite (marking it as declined)
+      await cancelInvite(invite.id);
+
+      return { success: true, declined: true };
+    } catch (err) {
+      console.error("Failed to decline invite:", err);
+      return fail(500, { error: "Failed to decline invitation" });
     }
   },
 };

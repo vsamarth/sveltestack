@@ -8,7 +8,8 @@
 
 <Sidebar.Provider>
   <AppSidebar
-    workspaces={data.workspaces}
+    ownedWorkspaces={data.ownedWorkspaces}
+    memberWorkspaces={data.memberWorkspaces}
     user={{ ...data.user, image: data.user.image ?? null }}
     workspaceForm={data.workspaceForm}
   />
