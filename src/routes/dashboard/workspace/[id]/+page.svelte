@@ -9,7 +9,6 @@
   import { Input } from "$lib/components/ui/input";
   import { X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
-  import prettyBytes from "pretty-bytes";
   import { toast } from "svelte-sonner";
   import FileTable from "$lib/components/file-table.svelte";
   import { siteConfig } from "$lib/config";
