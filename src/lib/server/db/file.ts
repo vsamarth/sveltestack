@@ -96,3 +96,14 @@ export async function verifyUserOwnsFile(
 
   return result.length > 0;
 }
+
+export async function verifyUserHasFileAccess(
+  userId: string,
+  fileId: string,
+): Promise<boolean> {
+  const file = await getFileById(fileId);
+  if (!file) return false;
+
+  const { hasWorkspaceAccess } = await import("./membership");
+  return hasWorkspaceAccess(file.workspaceId, userId);
+}

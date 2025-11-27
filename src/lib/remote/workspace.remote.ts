@@ -10,6 +10,7 @@ import {
   setLastActiveWorkspace as setLastActiveWorkspaceDb,
   getWorkspaceById,
 } from "$lib/server/db/workspace";
+import { hasWorkspaceAccess } from "$lib/server/db/membership";
 
 export const createWorkspace = command(z.string(), async (name) => {
   const { locals } = getRequestEvent();
@@ -109,7 +110,9 @@ export const setLastActiveWorkspace = command(
         error(404, "Workspace not found");
       }
 
-      if (workspace.ownerId !== locals.user.id) {
+      // Check if user has access to the workspace (owner or member)
+      const hasAccess = await hasWorkspaceAccess(workspaceId, locals.user.id);
+      if (!hasAccess) {
         error(403, "Forbidden");
       }
 

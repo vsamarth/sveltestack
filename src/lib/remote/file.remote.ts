@@ -6,7 +6,7 @@ import {
   renameFile as renameFileDb,
   getFileById,
 } from "$lib/server/db/file";
-import { getWorkspaceById } from "$lib/server/db/workspace";
+import { hasWorkspaceAccess } from "$lib/server/db/membership";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { S3Client } from "@aws-sdk/client-s3";
@@ -35,8 +35,12 @@ export const deleteFile = command(z.string(), async (fileId) => {
       error(404, "File not found.");
     }
 
-    const workspace = await getWorkspaceById(file.workspaceId);
-    if (!workspace || workspace.ownerId !== locals.user.id) {
+    // Check if user has access to the workspace (owner or member)
+    const hasAccess = await hasWorkspaceAccess(
+      file.workspaceId,
+      locals.user.id,
+    );
+    if (!hasAccess) {
       error(403, "Forbidden");
     }
 
@@ -69,14 +73,18 @@ export const renameFile = command(
     }
 
     try {
-      // Get file and verify workspace ownership
+      // Get file and verify workspace access
       const file = await getFileById(fileId);
       if (!file) {
         error(404, "File not found");
       }
 
-      const workspace = await getWorkspaceById(file.workspaceId);
-      if (!workspace || workspace.ownerId !== locals.user.id) {
+      // Check if user has access to the workspace (owner or member)
+      const hasAccess = await hasWorkspaceAccess(
+        file.workspaceId,
+        locals.user.id,
+      );
+      if (!hasAccess) {
         error(403, "Forbidden");
       }
 
@@ -103,9 +111,12 @@ export const getFilePreviewUrl = command(z.string(), async (fileId) => {
       error(404, "File not found");
     }
 
-    // Verify user owns the workspace
-    const workspace = await getWorkspaceById(file.workspaceId);
-    if (!workspace || workspace.ownerId !== locals.user.id) {
+    // Check if user has access to the workspace (owner or member)
+    const hasAccess = await hasWorkspaceAccess(
+      file.workspaceId,
+      locals.user.id,
+    );
+    if (!hasAccess) {
       error(403, "Forbidden");
     }
 
@@ -156,9 +167,12 @@ export const getFileDownloadUrl = command(z.string(), async (fileId) => {
       error(404, "File not found");
     }
 
-    // Verify user owns the workspace
-    const workspace = await getWorkspaceById(file.workspaceId);
-    if (!workspace || workspace.ownerId !== locals.user.id) {
+    // Check if user has access to the workspace (owner or member)
+    const hasAccess = await hasWorkspaceAccess(
+      file.workspaceId,
+      locals.user.id,
+    );
+    if (!hasAccess) {
       error(403, "Forbidden");
     }
 

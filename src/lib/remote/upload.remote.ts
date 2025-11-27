@@ -6,9 +6,9 @@ import { ulid } from "ulid";
 import {
   createPendingFile,
   confirmFileUpload,
-  verifyUserOwnsFile,
+  verifyUserHasFileAccess,
 } from "$lib/server/db/file";
-import { getWorkspaceById } from "$lib/server/db/workspace";
+import { hasWorkspaceAccess } from "$lib/server/db/membership";
 
 export const getPresignedUploadUrlRemote = command(
   z.object({
@@ -27,9 +27,9 @@ export const getPresignedUploadUrlRemote = command(
       error(400, "Filename and workspaceId are required");
     }
 
-    // Verify user owns workspace
-    const workspace = await getWorkspaceById(workspaceId);
-    if (!workspace || workspace.ownerId !== locals.user.id) {
+    // Check if user has access to the workspace (owner or member)
+    const hasAccess = await hasWorkspaceAccess(workspaceId, locals.user.id);
+    if (!hasAccess) {
       error(403, "Forbidden");
     }
 
@@ -80,8 +80,8 @@ export const confirmUpload = command(
       error(400, "File ID is required");
     }
 
-    // Verify user owns the file's workspace
-    const hasAccess = await verifyUserOwnsFile(locals.user.id, fileId);
+    // Verify user has access to the file's workspace (owner or member)
+    const hasAccess = await verifyUserHasFileAccess(locals.user.id, fileId);
     if (!hasAccess) {
       error(403, "Forbidden");
     }
