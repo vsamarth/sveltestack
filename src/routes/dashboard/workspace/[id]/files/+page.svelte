@@ -240,7 +240,7 @@
 </script>
 
 <svelte:head>
-  <title>{data.workspace.name} | {siteConfig.name}</title>
+  <title>Files - {data.workspace.name} | {siteConfig.name}</title>
   <meta
     name="description"
     content="Securely manage files and uploads in the {data.workspace

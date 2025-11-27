@@ -1,18 +1,12 @@
 import { db } from ".";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { workspaceInvite, workspaceMember } from "./schema";
+import { workspaceInvite, workspaceMember, workspace, user } from "./schema";
 import { randomBytes, createHash } from "node:crypto";
 
-/**
- * Generate a secure random token for invite links
- */
 function generateInviteToken(): string {
   return randomBytes(32).toString("base64url");
 }
 
-/**
- * Hash an invite token for secure storage
- */
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -42,8 +36,8 @@ export async function createInvite(
   }
 
   // Generate unique token
-  let token: string;
-  let tokenHash: string;
+  let token: string = "";
+  let tokenHash: string = "";
   let attempts = 0;
   const maxAttempts = 10;
 
@@ -65,7 +59,7 @@ export async function createInvite(
     attempts++;
   }
 
-  if (attempts >= maxAttempts) {
+  if (attempts >= maxAttempts || !tokenHash || tokenHash === "") {
     throw new Error("Failed to generate unique invite token");
   }
 
@@ -84,7 +78,7 @@ export async function createInvite(
 
   // Return the invite with the original token (not the hash) for the caller
   // This allows the caller to use the token in emails/URLs
-  return { ...result[0] };
+  return { ...result[0], token };
 }
 
 export async function getInviteByToken(token: string) {
@@ -97,6 +91,32 @@ export async function getInviteByToken(token: string) {
     .where(eq(workspaceInvite.token, tokenHash))
     .limit(1)
     .then((rows) => rows[0]);
+}
+
+export async function getInviteWithDetails(token: string) {
+  // Hash the provided token to compare with stored hash
+  const tokenHash = hashToken(token);
+
+  const result = await db
+    .select({
+      id: workspaceInvite.id,
+      email: workspaceInvite.email,
+      role: workspaceInvite.role,
+      status: workspaceInvite.status,
+      expiresAt: workspaceInvite.expiresAt,
+      createdAt: workspaceInvite.createdAt,
+      workspaceId: workspaceInvite.workspaceId,
+      workspaceName: workspace.name,
+      inviterName: user.name,
+      inviterEmail: user.email,
+    })
+    .from(workspaceInvite)
+    .innerJoin(workspace, eq(workspaceInvite.workspaceId, workspace.id))
+    .innerJoin(user, eq(workspaceInvite.invitedBy, user.id))
+    .where(eq(workspaceInvite.token, tokenHash))
+    .limit(1);
+
+  return result[0];
 }
 
 export async function getPendingInvites(workspaceId: string) {

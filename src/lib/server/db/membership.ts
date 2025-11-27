@@ -1,6 +1,6 @@
 import { db } from ".";
 import { and, eq } from "drizzle-orm";
-import { workspaceMember, workspace } from "./schema";
+import { workspaceMember, workspace, user } from "./schema";
 import { getWorkspaces } from "./workspace";
 
 export async function addMember(
@@ -35,6 +35,23 @@ export async function getWorkspaceMembers(workspaceId: string) {
   return await db
     .select()
     .from(workspaceMember)
+    .where(eq(workspaceMember.workspaceId, workspaceId))
+    .orderBy(workspaceMember.createdAt);
+}
+
+export async function getWorkspaceMembersWithDetails(workspaceId: string) {
+  return await db
+    .select({
+      id: workspaceMember.id,
+      userId: workspaceMember.userId,
+      role: workspaceMember.role,
+      createdAt: workspaceMember.createdAt,
+      userName: user.name,
+      userEmail: user.email,
+      userImage: user.image,
+    })
+    .from(workspaceMember)
+    .innerJoin(user, eq(workspaceMember.userId, user.id))
     .where(eq(workspaceMember.workspaceId, workspaceId))
     .orderBy(workspaceMember.createdAt);
 }
