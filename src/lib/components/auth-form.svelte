@@ -1,10 +1,7 @@
-<script lang="ts" generics="T extends z.ZodObject<z.ZodRawShape>">
-  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-  import { superForm, defaults } from "sveltekit-superforms";
+<script lang="ts">
+  import { superForm, defaults, setError } from "sveltekit-superforms";
   import { zod4 } from "sveltekit-superforms/adapters";
-  import type { z } from "zod";
-  import type { Snippet } from "svelte";
-  import type { SuperValidated } from "sveltekit-superforms";
+  import { loginSchema, signupSchema } from "$lib/validation";
   import { cn } from "$lib/utils.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import {
@@ -12,59 +9,22 @@
     Field,
     FieldDescription,
   } from "$lib/components/ui/field/index.js";
-  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as InputGroup from "$lib/components/ui/input-group/index.js";
-  import * as Form from "$lib/components/ui/form";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import type { HTMLAttributes } from "svelte/elements";
   import { EyeIcon, EyeOffIcon } from "@lucide/svelte";
-  import type { HTMLAttributes, HTMLInputAttributes } from "svelte/elements";
-
-  // Type utilities for schema-derived field configuration
-  type SchemaKeys<T extends z.ZodObject<any>> = keyof z.infer<T>;
-  type SchemaShape<T extends z.ZodObject<any>> = z.infer<T>;
-
-  type BaseFieldConfig = {
-    label: string;
-  } & Omit<HTMLInputAttributes, "value" | "ref">;
-
-  type FieldsConfig<T extends z.ZodObject<any>> = Partial<
-    Record<SchemaKeys<T>, BaseFieldConfig & Record<string, any>>
-  >;
+  import { authClient, getErrorMessage } from "$lib/auth-client";
+  import * as Form from "$lib/components/ui/form";
+  import { siteConfig } from "$lib/config";
 
   interface Props extends HTMLAttributes<HTMLFormElement> {
-    schema: T;
-    onSubmit: (form: SuperValidated<SchemaShape<T>, any>) => Promise<void>;
-    title: string;
-    submitText: string;
-    linkText?: string;
-    linkHref?: string;
-    linkLabel?: string;
-    description?: string;
-    fields?: FieldsConfig<T>;
-    titleSnippet?: Snippet;
-    footerSnippet?: Snippet<
-      [{ linkText?: string; linkHref?: string; linkLabel?: string }]
-    >;
+    mode: "login" | "signup";
   }
 
-  let {
-    schema,
-    onSubmit,
-    title: titleText,
-    submitText,
-    linkText,
-    linkHref,
-    linkLabel,
-    description,
-    fields: fieldsConfig = {},
-    titleSnippet,
-    footerSnippet,
-    class: className,
-    ...restProps
-  }: Props = $props();
+  let { mode, class: className, ...restProps }: Props = $props();
 
-  let showPassword = $state(false);
-
+  const schema = mode === "login" ? loginSchema : signupSchema;
   const data = defaults(zod4(schema));
 
   const form = superForm(data, {
@@ -72,43 +32,71 @@
     validators: zod4(schema),
     delayMs: 500,
     timeoutMs: 5000,
-    applyAction: false,
-    invalidateAll: false,
-    async onUpdate({ form: validatedForm }) {
-      if (!validatedForm.valid) return;
-      await onSubmit(validatedForm as SuperValidated<SchemaShape<T>, any>);
+    async onUpdate({ form }) {
+      if (!form.valid) return;
+
+      try {
+        if (mode === "login") {
+          const { error } = await authClient.signIn.email({
+            email: form.data.email as string,
+            password: form.data.password as string,
+            callbackURL: "/dashboard",
+          });
+          if (error)
+            setError(form, "password", getErrorMessage(error.code ?? ""));
+        } else {
+          const { error } = await authClient.signUp.email({
+            email: form.data.email as string,
+            password: form.data.password as string,
+            name: (form.data as { name?: string }).name as string,
+            callbackURL: "/dashboard",
+          });
+          if (error) {
+            setError(form, "password", getErrorMessage(error.code ?? ""));
+          }
+        }
+      } catch {
+        setError(form, "password", getErrorMessage());
+      }
     },
   });
 
   const { form: formData, enhance, delayed } = form;
+  let showPassword = $state(false);
+
+  const config = {
+    login: {
+      title: `Sign in to ${siteConfig.name}`,
+      titleClass: "text-2xl font-semibold tracking-tight",
+      submitText: "Sign in",
+      linkText: "Don't have an account?",
+      linkLabel: "Sign up",
+      linkHref: "/register",
+      description: undefined,
+    },
+    signup: {
+      title: `Create your ${siteConfig.name} account`,
+      titleClass: "text-2xl font-semibold tracking-tight",
+      submitText: "Create Account",
+      linkText: "Already have an account?",
+      linkLabel: "Sign in",
+      linkHref: "/login",
+    },
+  } as const;
+
+  const c = config[mode];
 </script>
 
-{#snippet standardField(
-  fieldName: string,
-  fieldConfig: BaseFieldConfig & Record<string, any>,
-)}
-  {@const {
-    label,
-    type,
-    showForgotPassword: _,
-    files: __,
-    ...inputProps
-  } = fieldConfig}
-  {@const autocomplete =
-    type === "email"
-      ? (inputProps.autocomplete ?? "email")
-      : inputProps.autocomplete}
-  <Form.Field {form} name={fieldName as never}>
+{#snippet emailField()}
+  <Form.Field {form} name="email">
     <Form.Control>
       {#snippet children({ props })}
-        <Form.Label>{label}</Form.Label>
-        <!-- prettier-ignore -->
+        <Form.Label>Email</Form.Label>
         <Input
           {...props}
-          {...inputProps}
-          type={type as any}
-          {autocomplete}
-          bind:value={($formData as any)[fieldName]}
+          type="email"
+          autocomplete="email"
+          bind:value={$formData.email}
         />
       {/snippet}
     </Form.Control>
@@ -122,23 +110,13 @@
   </Form.Field>
 {/snippet}
 
-{#snippet passwordField(
-  fieldName: string,
-  fieldConfig: BaseFieldConfig & Record<string, any>,
-)}
-  {@const {
-    label,
-    type,
-    showForgotPassword,
-    files: _,
-    ...inputProps
-  } = fieldConfig}
-  <Form.Field {form} name={fieldName as never}>
+{#snippet passwordField()}
+  <Form.Field {form} name="password">
     <Form.Control>
       {#snippet children({ props })}
         <div class="flex items-center justify-between">
-          <Form.Label>{label}</Form.Label>
-          {#if showForgotPassword}
+          <Form.Label>Password</Form.Label>
+          {#if mode === "login"}
             <a
               href="/forgot-password"
               class="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
@@ -148,15 +126,15 @@
           {/if}
         </div>
         <InputGroup.Root>
-          <!-- prettier-ignore -->
           <InputGroup.Input
             {...props}
-            {...inputProps}
-            type={(showPassword ? "text" : type) as any}
-            autocomplete={inputProps.autocomplete ?? "current-password"}
-            bind:value={($formData as any)[fieldName]}
+            type={showPassword ? "text" : "password"}
+            autocomplete={mode === "signup"
+              ? "new-password"
+              : "current-password"}
+            bind:value={$formData.password}
           />
-          {#if ($formData as any)[fieldName]}
+          {#if $formData.password}
             <InputGroup.Addon
               align="inline-end"
               class="rounded-r-md animate-in fade-in"
@@ -173,6 +151,7 @@
                 {:else}
                   <EyeOffIcon />
                 {/if}
+                <span class="sr-only">Toggle password visibility</span>
                 <span class="sr-only"
                   >{showPassword ? "Hide password" : "Show password"}</span
                 >
@@ -192,6 +171,25 @@
   </Form.Field>
 {/snippet}
 
+{#snippet nameField()}
+  <Form.Field {form} name={"name" as never}>
+    <Form.Control>
+      {#snippet children({ props })}
+        <Form.Label>Full Name</Form.Label>
+        <!-- prettier-ignore -->
+        <Input {...props} bind:value={($formData as { name?: string }).name} />
+      {/snippet}
+    </Form.Control>
+    <Form.FieldErrors>
+      {#snippet children({ errors, errorProps })}
+        {#if errors && errors.length > 0}
+          <div {...errorProps}>{errors[0]}</div>
+        {/if}
+      {/snippet}
+    </Form.FieldErrors>
+  </Form.Field>
+{/snippet}
+
 <form
   method="POST"
   use:enhance
@@ -199,47 +197,31 @@
   {...restProps}
 >
   <FieldGroup>
-    {#if titleSnippet}
-      {@render titleSnippet()}
-    {:else}
-      <div class="flex flex-col items-center gap-1 text-center">
-        <h1 class="text-2xl font-semibold tracking-tight">{titleText}</h1>
-        {#if description}
-          <p class="text-sm text-muted-foreground">{description}</p>
-        {/if}
-      </div>
-    {/if}
+    <div class="flex flex-col items-center gap-1 text-center">
+      <h1 class={c.titleClass}>{c.title}</h1>
+    </div>
 
-    {#each Object.entries(fieldsConfig) as [fieldName, fieldConfig] (fieldName)}
-      {#if fieldConfig}
-        {@const fieldType = fieldConfig.type?.toLowerCase()}
-        {#if fieldType === "password"}
-          {@render passwordField(fieldName, fieldConfig)}
-        {:else}
-          {@render standardField(fieldName, fieldConfig)}
-        {/if}
-      {/if}
-    {/each}
+    {@render emailField()}
+    {#if mode === "signup"}
+      {@render nameField()}
+    {/if}
+    {@render passwordField()}
 
     <Field>
       <Button type="submit" disabled={$delayed}>
         {#if $delayed}
           <Spinner />
         {/if}
-        {submitText}
+        {c.submitText}
       </Button>
     </Field>
-
-    {#if footerSnippet}
-      {@render footerSnippet({ linkText, linkHref, linkLabel })}
-    {:else if linkText && linkHref && linkLabel}
-      <Field>
-        <FieldDescription class="text-center">
-          {linkText}
-          <a href={linkHref} class="underline underline-offset-4">{linkLabel}</a
-          >
-        </FieldDescription>
-      </Field>
-    {/if}
+    <Field>
+      <FieldDescription class="text-center">
+        {c.linkText}
+        <a href={c.linkHref} class="underline underline-offset-4"
+          >{c.linkLabel}</a
+        >
+      </FieldDescription>
+    </Field>
   </FieldGroup>
 </form>

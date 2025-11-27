@@ -11,10 +11,6 @@
   import { FolderPlusIcon, PencilIcon } from "@lucide/svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
-  import {
-    createWorkspace,
-    updateWorkspace,
-  } from "$lib/actions/workspace.remote";
 
   interface Props {
     open?: boolean;
@@ -70,15 +66,34 @@
 
       try {
         if (mode === "create") {
-          const { id } = await createWorkspace(form.data.name);
+          const response = await fetch("/api/workspace", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(form.data),
+          });
+
+          if (!response.ok) {
+            const error = await response.text();
+            errorMessage = error || "Failed to create workspace";
+            return;
+          }
+
+          const { workspace } = await response.json();
           await invalidateAll();
           open = false;
-          await goto(`/dashboard/workspace/${id}`);
-        } else if (workspaceId) {
-          await updateWorkspace({
-            name: form.data.name,
-            workspaceId,
+          await goto(`/dashboard/workspace/${workspace.id}`);
+        } else {
+          const response = await fetch("/api/workspace", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workspaceId, name: form.data.name }),
           });
+
+          if (!response.ok) {
+            const error = await response.text();
+            errorMessage = error || "Failed to rename workspace";
+            return;
+          }
 
           await invalidateAll();
           open = false;
@@ -121,7 +136,7 @@
         </div>
       </div>
     </Dialog.Header>
-    <form use:enhance class="space-y-6 pt-2">
+    <form method="POST" use:enhance class="space-y-6 pt-2">
       <Form.Field {form} name="name">
         <Form.Control>
           {#snippet children({ props })}
