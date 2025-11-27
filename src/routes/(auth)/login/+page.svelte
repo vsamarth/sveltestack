@@ -37,7 +37,7 @@
 <AuthForm
   schema={loginSchema}
   onSubmit={handleLogin}
-  title={`Sign in`}
+  title="Sign in"
   submitText="Sign in"
   linkText="Don't have an account?"
   linkLabel="Sign up"
