@@ -51,9 +51,17 @@
 
   async function handleResendVerification() {
     isResendingVerification = true;
-    await new Promise((r) => setTimeout(r, 1000));
-    isResendingVerification = false;
-    toast.success("Verification email sent. Check your inbox.");
+    try {
+      await authClient.sendVerificationEmail({
+        email: user.email,
+        callbackURL: "/dashboard",
+      });
+      toast.success("Verification email sent. Check your inbox.");
+    } catch {
+      toast.error("Failed to send verification email. Please try again.");
+    } finally {
+      isResendingVerification = false;
+    }
   }
 
   async function handleDeleteAccount() {
