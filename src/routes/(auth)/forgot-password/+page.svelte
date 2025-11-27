@@ -14,9 +14,8 @@
   let showSuccess = $state(false);
   let submittedEmail = $state("");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleForgotPassword(
-    form: SuperValidated<ForgotPasswordFormData, any>,
+    form: SuperValidated<ForgotPasswordFormData, unknown>,
   ) {
     try {
       await authClient.requestPasswordReset({

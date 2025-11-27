@@ -1,4 +1,4 @@
-<script lang="ts" generics="T extends z.ZodObject<any>">
+<script lang="ts" generics="T extends z.ZodObject<z.ZodRawShape>">
   /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
   import { superForm, defaults } from "sveltekit-superforms";
   import { zod4 } from "sveltekit-superforms/adapters";

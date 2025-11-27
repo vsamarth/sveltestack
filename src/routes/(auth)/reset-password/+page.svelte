@@ -27,9 +27,8 @@
     }
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleResetPassword(
-    form: SuperValidated<ResetPasswordFormData, any>,
+    form: SuperValidated<ResetPasswordFormData, unknown>,
   ) {
     if (!token) {
       setError(form, "password", "Invalid or missing reset token.");

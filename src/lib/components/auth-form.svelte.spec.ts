@@ -1,657 +1,342 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-svelte";
 import AuthForm from "./auth-form.svelte";
-import { loginSchema, signupSchema } from "$lib/validation";
+import { z } from "zod";
 import type { SuperValidated } from "sveltekit-superforms";
 
-describe("Authentication Form", () => {
-  describe("Basic Rendering", () => {
-    it("should render title heading", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
+// Test schema
+const testSchema = z.object({
+  email: z.string().email("Invalid email").min(1, "Email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
-      const { getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-      });
+// Reusable field configs
+const fields = {
+  email: { label: "Email", type: "email" },
+  password: { label: "Password", type: "password" },
+} as const;
 
-      const heading = getByRole("heading", { level: 1 });
-      await expect.element(heading).toBeInTheDocument();
-      await expect.element(heading).toHaveTextContent("Sign In");
-    });
+// Base props
+const baseProps = {
+  schema: testSchema,
+  onSubmit: vi.fn().mockResolvedValue(undefined),
+  title: "Test Form",
+  submitText: "Submit",
+};
 
-    it("should render description when provided", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
+// Common prop combinations
+const withFields = (fieldConfig: typeof fields | Partial<typeof fields>) => ({
+  ...baseProps,
+  fields: fieldConfig,
+});
 
-      const { getByText } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        description: "Enter your credentials to continue",
-      });
+const withMockSubmit = () => {
+  const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
+  return { mockOnSubmit, props: { ...baseProps, onSubmit: mockOnSubmit } };
+};
 
-      const description = getByText("Enter your credentials to continue");
-      await expect.element(description).toBeInTheDocument();
-    });
+describe("AuthForm", () => {
+  describe("rendering", () => {
+    it("renders title and submit button", async () => {
+      const { getByRole } = render(AuthForm, baseProps);
 
-    it("should render submit button with correct text", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-      });
-
-      const submitButton = getByRole("button", { name: /sign in/i });
-      await expect.element(submitButton).toBeInTheDocument();
-    });
-  });
-
-  describe("Field Rendering", () => {
-    it("should render standard fields with labels", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText } = render(AuthForm, {
-        schema: signupSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign Up",
-        submitText: "Create Account",
-        fields: {
-          name: {
-            label: "Full Name",
-            type: "text",
-            autocomplete: "name",
-          },
-          email: {
-            label: "Email",
-            type: "email",
-            autocomplete: "email",
-          },
-        },
-      });
-
-      const nameLabel = getByLabelText("Full Name");
-      const emailLabel = getByLabelText("Email");
-
-      await expect.element(nameLabel).toBeInTheDocument();
-      await expect.element(emailLabel).toBeInTheDocument();
-    });
-
-    it("should render password field with label", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-            autocomplete: "current-password",
-          },
-        },
-      });
-
-      const passwordLabel = getByLabelText("Password");
-      await expect.element(passwordLabel).toBeInTheDocument();
-      await expect.element(passwordLabel).toHaveAttribute("type", "password");
-    });
-
-    it("should render all fields from fieldsConfig", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText } = render(AuthForm, {
-        schema: signupSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign Up",
-        submitText: "Create Account",
-        fields: {
-          name: {
-            label: "Full Name",
-            type: "text",
-          },
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const nameField = getByLabelText("Full Name");
-      const emailField = getByLabelText("Email");
-      const passwordField = getByLabelText("Password");
-
-      await expect.element(nameField).toBeInTheDocument();
-      await expect.element(emailField).toBeInTheDocument();
-      await expect.element(passwordField).toBeInTheDocument();
-    });
-  });
-
-  describe("Password Field Functionality", () => {
-    it("should show password toggle button when password field has value", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const passwordInput = getByLabelText("Password");
-      await passwordInput.fill("testpassword123");
-
-      // Wait for the toggle button to appear
-      const toggleButton = getByRole("button", { name: /show password/i });
-      await expect.element(toggleButton).toBeInTheDocument();
-    });
-
-    it("should toggle password visibility when button is clicked", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const passwordInput = getByLabelText("Password");
-      await passwordInput.fill("testpassword123");
-
-      // Wait for toggle button and click it
-      const toggleButton = getByRole("button", { name: /show password/i });
-      await expect.element(toggleButton).toBeInTheDocument();
-      await toggleButton.click();
-
-      // Password should now be visible (type="text")
-      await expect.element(passwordInput).toHaveAttribute("type", "text");
-
-      // Button should now say "Hide password"
-      const hideButton = getByRole("button", { name: /hide password/i });
-      await expect.element(hideButton).toBeInTheDocument();
-    });
-
-    it("should show 'Forgot password?' link when showForgotPassword is true", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-            showForgotPassword: true,
-          },
-        },
-      });
-
-      const forgotPasswordLink = getByRole("link", {
-        name: /forgot password/i,
-      });
-      await expect.element(forgotPasswordLink).toBeInTheDocument();
       await expect
-        .element(forgotPasswordLink)
+        .element(getByRole("heading", { level: 1 }))
+        .toHaveTextContent("Test Form");
+      await expect
+        .element(getByRole("button", { name: /submit/i }))
+        .toBeInTheDocument();
+    });
+
+    it("renders description when provided", async () => {
+      const { getByText } = render(AuthForm, {
+        ...baseProps,
+        description: "Test description",
+      });
+
+      await expect.element(getByText("Test description")).toBeInTheDocument();
+    });
+
+    it("renders configured fields", async () => {
+      const { getByLabelText } = render(AuthForm, withFields(fields));
+
+      await expect.element(getByLabelText("Email")).toBeInTheDocument();
+      await expect.element(getByLabelText("Password")).toBeInTheDocument();
+    });
+
+    it("renders without fields when none configured", async () => {
+      const { getByRole } = render(AuthForm, withFields({}));
+
+      await expect
+        .element(getByRole("heading", { level: 1 }))
+        .toBeInTheDocument();
+      await expect
+        .element(getByRole("button", { name: /submit/i }))
+        .toBeInTheDocument();
+    });
+  });
+
+  describe("footer link", () => {
+    it("renders when all link props provided", async () => {
+      const { getByRole, getByText } = render(AuthForm, {
+        ...baseProps,
+        linkText: "Need help?",
+        linkHref: "/help",
+        linkLabel: "Get help",
+      });
+
+      await expect.element(getByText("Need help?")).toBeInTheDocument();
+      await expect
+        .element(getByRole("link", { name: /get help/i }))
+        .toHaveAttribute("href", "/help");
+    });
+
+    it("does not render when link props missing", async () => {
+      const { container } = render(AuthForm, baseProps);
+      expect(container.querySelector("a")).toBeNull();
+    });
+  });
+
+  describe("password field", () => {
+    const passwordProps = withFields({ password: fields.password });
+
+    it("toggles visibility when button clicked", async () => {
+      const { getByLabelText, getByRole } = render(AuthForm, passwordProps);
+
+      const input = getByLabelText("Password");
+      await input.fill("secret123");
+
+      await expect.element(input).toHaveAttribute("type", "password");
+      await getByRole("button", { name: /show password/i }).click();
+      await expect.element(input).toHaveAttribute("type", "text");
+      await getByRole("button", { name: /hide password/i }).click();
+      await expect.element(input).toHaveAttribute("type", "password");
+    });
+
+    it("hides toggle button when empty", async () => {
+      const { container } = render(AuthForm, passwordProps);
+      expect(container.querySelector('button[type="button"]')).toBeNull();
+    });
+
+    it("shows forgot password link when configured", async () => {
+      const { getByRole } = render(AuthForm, {
+        ...baseProps,
+        fields: { password: { ...fields.password, showForgotPassword: true } },
+      });
+
+      await expect
+        .element(getByRole("link", { name: /forgot password/i }))
         .toHaveAttribute("href", "/forgot-password");
     });
 
-    it("should not show 'Forgot password?' link when showForgotPassword is false", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { container } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-            showForgotPassword: false,
-          },
-        },
-      });
-
-      const forgotPasswordLink = container.querySelector(
-        'a[href="/forgot-password"]',
-      );
-      expect(forgotPasswordLink).toBeNull();
-    });
-  });
-
-  describe("Form Submission", () => {
-    it("should call onSubmit with validated form data", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const emailInput = getByLabelText("Email");
-      const passwordInput = getByLabelText("Password");
-      const submitButton = getByRole("button", { name: /sign in/i });
-
-      await emailInput.fill("test@example.com");
-      await passwordInput.fill("password123");
-      await submitButton.click();
-
-      // Wait for form submission to complete
-      await vi.waitFor(
-        () => {
-          expect(mockOnSubmit).toHaveBeenCalled();
-        },
-        { timeout: 2000 },
-      );
-      const callArgs = mockOnSubmit.mock.calls[0][0] as SuperValidated<{
-        email: string;
-        password: string;
-      }>;
-      expect(callArgs.data.email).toBe("test@example.com");
-      expect(callArgs.data.password).toBe("password123");
-      expect(callArgs.valid).toBe(true);
-    });
-  });
-
-  describe("Optional Props", () => {
-    it("should render footer link when linkText, linkHref, and linkLabel are provided", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        linkText: "Don't have an account?",
-        linkHref: "/register",
-        linkLabel: "Sign up",
-      });
-
-      const linkText = getByText("Don't have an account?");
-      const link = getByRole("link", { name: /sign up/i });
-
-      await expect.element(linkText).toBeInTheDocument();
-      await expect.element(link).toBeInTheDocument();
-      await expect.element(link).toHaveAttribute("href", "/register");
-    });
-
-    it("should not render footer link when props are missing", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { container } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-      });
-
-      const link = container.querySelector('a[href="/register"]');
-      expect(link).toBeNull();
-    });
-  });
-
-  describe("Form Validation", () => {
-    it("should display validation errors for invalid input", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole, getByText } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const emailInput = getByLabelText("Email");
-      const submitButton = getByRole("button", { name: /sign in/i });
-
-      // Submit with invalid email
-      await emailInput.fill("invalid-email");
-      await submitButton.click();
-
-      // Wait for validation error to appear
-      const errorMessage = await vi.waitFor(
-        () => {
-          try {
-            const error = getByText(/invalid email address/i);
-            return error;
-          } catch {
-            throw new Error("Validation error not found yet");
-          }
-        },
-        { timeout: 2000 },
+    it("hides toggle when password is cleared", async () => {
+      const { getByLabelText, getByRole, container } = render(
+        AuthForm,
+        passwordProps,
       );
 
-      await expect.element(errorMessage).toBeInTheDocument();
-    });
+      const input = getByLabelText("Password");
+      await input.fill("secret123");
 
-    it("should NOT call onSubmit when validation fails", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const emailInput = getByLabelText("Email");
-      const submitButton = getByRole("button", { name: /sign in/i });
-
-      // Submit with invalid email format
-      await emailInput.fill("invalid-email");
-      await submitButton.click();
-
-      // Wait a bit to ensure any async operations complete
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // onSubmit should NOT have been called
-      expect(mockOnSubmit).not.toHaveBeenCalled();
-    });
-
-    it("should show required field errors on empty submission", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByRole, getByText } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const submitButton = getByRole("button", { name: /sign in/i });
-
-      // Submit without filling any fields
-      await submitButton.click();
-
-      // Wait for validation errors to appear
-      await vi.waitFor(
-        () => {
-          const emailError = getByText(/email is required/i);
-          return emailError;
-        },
-        { timeout: 2000 },
-      );
-
-      const emailError = getByText(/email is required/i);
-      await expect.element(emailError).toBeInTheDocument();
-
-      // onSubmit should NOT have been called
-      expect(mockOnSubmit).not.toHaveBeenCalled();
-    });
-
-    it("should show password minimum length error for signup", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole, getByText } = render(AuthForm, {
-        schema: signupSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign Up",
-        submitText: "Create Account",
-        fields: {
-          name: {
-            label: "Full Name",
-            type: "text",
-          },
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const nameInput = getByLabelText("Full Name");
-      const emailInput = getByLabelText("Email");
-      const passwordInput = getByLabelText("Password");
-      const submitButton = getByRole("button", { name: /create account/i });
-
-      // Fill valid name and email, but password too short
-      await nameInput.fill("John Doe");
-      await emailInput.fill("john@example.com");
-      await passwordInput.fill("short");
-      await submitButton.click();
-
-      // Wait for password validation error
-      const errorMessage = await vi.waitFor(
-        () => {
-          const error = getByText(/password must be at least 8 characters/i);
-          return error;
-        },
-        { timeout: 2000 },
-      );
-
-      await expect.element(errorMessage).toBeInTheDocument();
-      expect(mockOnSubmit).not.toHaveBeenCalled();
-    });
-
-    it("should disable submit button during form submission", async ({
-      skip,
-    }) => {
-      skip();
-      const mockOnSubmit = vi
-        .fn()
-        .mockImplementation(
-          () => new Promise((resolve) => setTimeout(resolve, 1000)),
-        );
-
-      const { getByLabelText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          email: {
-            label: "Email",
-            type: "email",
-          },
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const emailInput = getByLabelText("Email");
-      const passwordInput = getByLabelText("Password");
-      const submitButton = getByRole("button", { name: /sign in/i });
-
-      await emailInput.fill("test@example.com");
-      await passwordInput.fill("password123");
-      await submitButton.click();
-
-      // Wait for button to be disabled (delayMs is 500)
-      // expect.element already handles waiting, so we can use it directly
-      await expect.element(submitButton).toBeDisabled();
-    });
-  });
-
-  describe("Autocomplete Attributes", () => {
-    it("should set email autocomplete by default for email fields", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          email: {
-            label: "Email",
-            type: "email",
-          },
-        },
-      });
-
-      const emailInput = getByLabelText("Email");
-      await expect.element(emailInput).toHaveAttribute("autocomplete", "email");
-    });
-
-    it("should set current-password autocomplete by default for password fields", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
-      });
-
-      const passwordInput = getByLabelText("Password");
+      // Toggle should be visible
       await expect
-        .element(passwordInput)
+        .element(getByRole("button", { name: /show password/i }))
+        .toBeInTheDocument();
+
+      // Clear the password
+      await input.fill("");
+
+      // Toggle should disappear
+      expect(container.querySelector('button[type="button"]')).toBeNull();
+    });
+  });
+
+  describe("autocomplete", () => {
+    it("sets default autocomplete for email and password", async () => {
+      const { getByLabelText } = render(AuthForm, withFields(fields));
+
+      await expect
+        .element(getByLabelText("Email"))
+        .toHaveAttribute("autocomplete", "email");
+      await expect
+        .element(getByLabelText("Password"))
         .toHaveAttribute("autocomplete", "current-password");
     });
 
-    it("should allow overriding autocomplete attributes", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
+    it("allows overriding autocomplete", async () => {
       const { getByLabelText } = render(AuthForm, {
-        schema: signupSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign Up",
-        submitText: "Create Account",
+        ...baseProps,
         fields: {
-          password: {
-            label: "Password",
-            type: "password",
-            autocomplete: "new-password",
-          },
+          password: { ...fields.password, autocomplete: "new-password" },
         },
       });
 
-      const passwordInput = getByLabelText("Password");
       await expect
-        .element(passwordInput)
+        .element(getByLabelText("Password"))
         .toHaveAttribute("autocomplete", "new-password");
     });
   });
 
-  describe("Password Toggle Edge Cases", () => {
-    it("should NOT show password toggle button when password field is empty", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { container } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
+  describe("validation", () => {
+    it("displays validation errors and blocks submission", async () => {
+      const { mockOnSubmit, props } = withMockSubmit();
+      const { getByLabelText, getByRole, getByText } = render(AuthForm, {
+        ...props,
+        fields: { email: fields.email },
       });
 
-      // Toggle button should not be present when password is empty
-      const toggleButton = container.querySelector('button[type="button"]');
-      expect(toggleButton).toBeNull();
+      await getByLabelText("Email").fill("invalid");
+      await getByRole("button", { name: /submit/i }).click();
+
+      await vi.waitFor(
+        () => expect(getByText(/invalid email/i).element()).toBeTruthy(),
+        { timeout: 2000 },
+      );
+      expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
-    it("should toggle password back to hidden after showing", async () => {
-      const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
-      const { getByLabelText, getByRole } = render(AuthForm, {
-        schema: loginSchema,
-        onSubmit: mockOnSubmit,
-        title: "Sign In",
-        submitText: "Sign in",
-        fields: {
-          password: {
-            label: "Password",
-            type: "password",
-          },
-        },
+    it("shows errors for multiple invalid fields", async () => {
+      const { mockOnSubmit, props } = withMockSubmit();
+      const { getByLabelText, getByRole, getByText } = render(AuthForm, {
+        ...props,
+        fields,
       });
 
-      const passwordInput = getByLabelText("Password");
-      await passwordInput.fill("testpassword123");
+      await getByLabelText("Email").fill("bad");
+      await getByLabelText("Password").fill("short");
+      await getByRole("button", { name: /submit/i }).click();
 
-      // Show password
-      const showButton = getByRole("button", { name: /show password/i });
-      await showButton.click();
-      await expect.element(passwordInput).toHaveAttribute("type", "text");
+      await vi.waitFor(
+        () => {
+          expect(getByText(/invalid email/i).element()).toBeTruthy();
+          expect(getByText(/at least 8 characters/i).element()).toBeTruthy();
+        },
+        { timeout: 2000 },
+      );
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
 
-      // Hide password again
-      const hideButton = getByRole("button", { name: /hide password/i });
-      await hideButton.click();
-      await expect.element(passwordInput).toHaveAttribute("type", "password");
+    it("clears errors and submits after fixing invalid input", async () => {
+      const { mockOnSubmit, props } = withMockSubmit();
+      const { getByLabelText, getByRole, getByText, container } = render(
+        AuthForm,
+        {
+          ...props,
+          fields,
+        },
+      );
+
+      // Submit with invalid data
+      await getByLabelText("Email").fill("invalid");
+      await getByLabelText("Password").fill("short");
+      await getByRole("button", { name: /submit/i }).click();
+
+      await vi.waitFor(
+        () => expect(getByText(/invalid email/i).element()).toBeTruthy(),
+        { timeout: 2000 },
+      );
+
+      // Fix the errors
+      await getByLabelText("Email").fill("valid@example.com");
+      await getByLabelText("Password").fill("validpassword123");
+      await getByRole("button", { name: /submit/i }).click();
+
+      // Should submit successfully
+      await vi.waitFor(() => expect(mockOnSubmit).toHaveBeenCalled(), {
+        timeout: 2000,
+      });
+
+      // Errors should be cleared
+      expect(container.querySelector("[data-fs-field-error]")).toBeNull();
+    });
+  });
+
+  describe("submission", () => {
+    it("calls onSubmit with valid data", async () => {
+      const { mockOnSubmit, props } = withMockSubmit();
+      const { getByLabelText, getByRole } = render(AuthForm, {
+        ...props,
+        fields,
+      });
+
+      await getByLabelText("Email").fill("test@example.com");
+      await getByLabelText("Password").fill("password123");
+      await getByRole("button", { name: /submit/i }).click();
+
+      await vi.waitFor(() => expect(mockOnSubmit).toHaveBeenCalled(), {
+        timeout: 2000,
+      });
+
+      const callArgs = mockOnSubmit.mock.calls[0][0] as SuperValidated<
+        z.infer<typeof testSchema>
+      >;
+      expect(callArgs.data.email).toBe("test@example.com");
+      expect(callArgs.data.password).toBe("password123");
+      expect(callArgs.valid).toBe(true);
+    });
+
+    it("shows spinner and disables button during submission", async () => {
+      let resolveSubmit: () => void;
+      const mockOnSubmit = vi.fn().mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveSubmit = resolve;
+          }),
+      );
+
+      const { getByLabelText, getByRole } = render(AuthForm, {
+        ...baseProps,
+        onSubmit: mockOnSubmit,
+        fields,
+      });
+
+      await getByLabelText("Email").fill("test@example.com");
+      await getByLabelText("Password").fill("password123");
+
+      const submitButton = getByRole("button", { name: /submit/i });
+      await submitButton.click();
+
+      // Button should be disabled and show spinner
+      await expect.element(submitButton).toBeDisabled();
+      await expect
+        .element(getByRole("status", { name: /loading/i }))
+        .toBeInTheDocument();
+
+      resolveSubmit!();
+    });
+
+    it("prevents double submission", async () => {
+      let resolveSubmit: () => void;
+      const mockOnSubmit = vi.fn().mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveSubmit = resolve;
+          }),
+      );
+
+      const { getByLabelText, getByRole } = render(AuthForm, {
+        ...baseProps,
+        onSubmit: mockOnSubmit,
+        fields,
+      });
+
+      await getByLabelText("Email").fill("test@example.com");
+      await getByLabelText("Password").fill("password123");
+
+      const submitButton = getByRole("button", { name: /submit/i });
+
+      // Click multiple times rapidly
+      await submitButton.click();
+      await submitButton.click();
+      await submitButton.click();
+
+      // Wait for delayed state
+      await expect.element(submitButton).toBeDisabled();
+
+      // Should only have been called once
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+
+      resolveSubmit!();
     });
   });
 });
