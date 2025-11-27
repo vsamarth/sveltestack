@@ -22,8 +22,9 @@
     "lint": "prettier --check . && eslint .",
     "prepare": "svelte-kit sync || echo ''",
     "preview": "vite preview",
-    "test": "vitest --run",
-    "test:watch": "vitest"
+    "test": "vitest --run && npm run test:e2e",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "prettier": {
     "plugins": [
@@ -68,6 +69,7 @@
     "@eslint/compat": "^1.4.1",
     "@eslint/js": "^9.39.1",
     "@internationalized/date": "^3.10.0",
+    "@playwright/test": "^1.56.1",
     "@react-email/components": "^1.0.1",
     "@react-email/preview-server": "5.0.5",
     "@sveltejs/adapter-auto": "^7.0.0",

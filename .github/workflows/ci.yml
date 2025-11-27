@@ -84,7 +84,7 @@ jobs:
           exit 1
 
       - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
+        run: bunx playwright install
 
       - name: Run tests
         run: bun run test

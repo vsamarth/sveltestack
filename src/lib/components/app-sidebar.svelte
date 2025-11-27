@@ -18,6 +18,8 @@
   import WorkspaceFormDialog from "./workspace-form-dialog.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
+  import { deleteWorkspace } from "$lib/actions/workspace.remote";
+  import { goto, invalidateAll } from "$app/navigation";
 
   type Props = ComponentProps<typeof Sidebar.Root> & {
     workspaces?: Workspace[];
@@ -62,22 +64,11 @@
     if (!workspaceToDelete) return;
 
     try {
-      const response = await fetch("/api/workspace", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId: workspaceToDelete.id }),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        console.error(error || "Failed to delete workspace");
-        return;
-      }
-
-      const { redirectTo } = await response.json();
+      const result = await deleteWorkspace(workspaceToDelete.id);
       deleteDialogOpen = false;
       workspaceToDelete = null;
-      window.location.href = redirectTo;
+      await invalidateAll();
+      await goto(result.redirectTo);
     } catch (error) {
       console.error("Failed to delete workspace:", error);
     }
