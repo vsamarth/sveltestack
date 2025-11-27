@@ -83,6 +83,9 @@ jobs:
           done
           exit 1
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
       - name: Run tests
         run: bun run test
 

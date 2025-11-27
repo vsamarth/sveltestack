@@ -20,7 +20,7 @@
     "email:dev": "email dev --dir src/lib/emails",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint .",
-    "prepare": "npx playwright install --with-deps && svelte-kit sync",
+    "prepare": "svelte-kit sync",
     "preview": "vite preview",
     "test": "vitest --run && npm run test:e2e",
     "test:e2e": "playwright test",
