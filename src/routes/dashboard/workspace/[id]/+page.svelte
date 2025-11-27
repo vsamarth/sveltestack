@@ -47,7 +47,7 @@
             filename: file.name,
             contentType: file.type,
             workspaceId: data.workspace.id,
-            size: file.size,
+            size: typeof file.size === "number" ? file.size : undefined,
           });
 
           // Store fileId for confirmation
@@ -58,10 +58,12 @@
             file.name,
             responseData,
           );
+          // Ensure the returned object matches AwsS3UploadParameters
           return {
-            method: responseData.method,
+            method: "PUT",
             url: responseData.url,
             headers: responseData.headers,
+            // 'fields' and 'expires' are optional, not needed for simple PUT
           };
         } catch (error) {
           console.error("Failed to get upload URL:", error);
@@ -70,15 +72,15 @@
       },
     });
 
-    // Setup event listenersSetup event listeners
+    // Setup event listeners
 
     instance.on("upload-success", async (file) => {
-      if (file && file.meta.fileId) {
+      if (file && file.meta.fileId && typeof file.meta.fileId === "string") {
         try {
           // Confirm upload in database
-          await confirmUpload({ fileId: file.meta.fileId });
-
-          // Reload files list from server
+          await confirmUpload({
+            fileId: file.meta.fileId,
+          });
           await invalidateAll();
 
           toast.success("File uploaded", {
