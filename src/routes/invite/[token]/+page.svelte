@@ -10,7 +10,6 @@
     XCircleIcon,
     ClockIcon,
     MailIcon,
-    AlertTriangleIcon,
     UsersIcon,
     XIcon,
   } from "@lucide/svelte";
@@ -183,32 +182,6 @@
                 {/if}
               </div>
             </div>
-
-            {#if !data.emailMatches}
-              <!-- Email mismatch warning -->
-              <div
-                class="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm"
-              >
-                <AlertTriangleIcon
-                  class="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5"
-                />
-                <div>
-                  <p
-                    class="font-medium text-amber-700 dark:text-amber-300 mb-1"
-                  >
-                    Email mismatch
-                  </p>
-                  <p class="text-amber-600 dark:text-amber-400">
-                    This invite was sent to <span class="font-medium"
-                      >{data.invite.email}</span
-                    >, but you're logged in as
-                    <span class="font-medium">{data.user.email}</span>. You can
-                    still accept if you manage multiple accounts. This is safe
-                    if intentional.
-                  </p>
-                </div>
-              </div>
-            {/if}
 
             <!-- Subtle Logged in as indicator -->
             <div

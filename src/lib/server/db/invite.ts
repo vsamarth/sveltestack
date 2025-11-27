@@ -133,7 +133,7 @@ export async function getPendingInvites(workspaceId: string) {
     .orderBy(workspaceInvite.createdAt);
 }
 
-export async function acceptInvite(token: string, userId: string) {
+export async function acceptInvite(token: string, userId: string, userEmail: string) {
   // Get the invite
   const invite = await getInviteByToken(token);
 
@@ -143,6 +143,11 @@ export async function acceptInvite(token: string, userId: string) {
 
   if (invite.status !== "pending") {
     throw new Error(`Invite is ${invite.status}`);
+  }
+
+  // Validate that the user's email matches the invite email
+  if (userEmail.toLowerCase() !== invite.email.toLowerCase()) {
+    throw new Error("This invitation was sent to a different email address");
   }
 
   // Check if invite has expired

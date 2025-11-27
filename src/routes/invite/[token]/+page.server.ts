@@ -46,6 +46,14 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
     const emailMatches =
       locals.user.email.toLowerCase() === invite.email.toLowerCase();
 
+    // If email doesn't match, treat as invalid invite to prevent information disclosure
+    if (!emailMatches) {
+      return {
+        error: "invalid",
+        message: "This invite link is invalid or has already been used.",
+      };
+    }
+
     // Get workspace member count for context
     const members = await getWorkspaceMembers(invite.workspaceId);
     const memberCount = members.length + 1; // +1 for owner
@@ -96,7 +104,23 @@ export const actions: Actions = {
     const { token } = params;
 
     try {
-      const result = await acceptInvite(token, locals.user.id);
+      // Get the invite first to validate email match (defense in depth)
+      const invite = await getInviteWithDetails(token);
+
+      if (!invite) {
+        return fail(404, { error: "Invite not found" });
+      }
+
+      // Validate email match before accepting
+      if (
+        locals.user.email.toLowerCase() !== invite.email.toLowerCase()
+      ) {
+        return fail(403, {
+          error: "This invitation was sent to a different email address",
+        });
+      }
+
+      const result = await acceptInvite(token, locals.user.id, locals.user.email);
 
       // Get workspace for redirect
       const workspace = await getWorkspaceById(result.invite.workspaceId);
@@ -115,6 +139,11 @@ export const actions: Actions = {
         }
         if (err.message.includes("not found")) {
           return fail(404, { error: "Invite not found" });
+        }
+        if (err.message.includes("different email address")) {
+          return fail(403, {
+            error: "This invitation was sent to a different email address",
+          });
         }
         return fail(400, { error: err.message });
       }
