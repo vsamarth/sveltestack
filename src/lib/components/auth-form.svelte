@@ -85,7 +85,7 @@
 
 {#snippet standardField(
   fieldName: string,
-  fieldConfig: BaseFieldConfig & Record<string, any>,
+  fieldConfig: BaseFieldConfig & Record,
 )}
   {@const {
     label,
@@ -124,7 +124,7 @@
 
 {#snippet passwordField(
   fieldName: string,
-  fieldConfig: BaseFieldConfig & Record<string, any>,
+  fieldConfig: BaseFieldConfig & Record,
 )}
   {@const {
     label,
