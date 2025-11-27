@@ -72,7 +72,7 @@ jobs:
           exit 1
 
       - name: Push database schema
-        run: bun run db:push
+        run: bun run db:push --force
 
       - name: Wait for MinIO
         run: |
@@ -139,7 +139,7 @@ jobs:
           exit 1
 
       - name: Push database schema
-        run: bun run db:push
+        run: bun run db:push --force
 
       - name: Wait for MinIO
         run: |
