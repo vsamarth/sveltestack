@@ -48,7 +48,7 @@ export const updateWorkspace = command(
           name: workspace.name,
         };
       } else {
-        error(403, "Forbidden")
+        error(403, "Forbidden");
       }
     } catch (err) {
       console.error("Failed to update workspace:", err);

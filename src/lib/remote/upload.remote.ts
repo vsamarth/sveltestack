@@ -96,4 +96,3 @@ export const confirmUpload = command(
     return { success: true, file: updatedFile };
   },
 );
-
