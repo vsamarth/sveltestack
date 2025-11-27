@@ -41,7 +41,9 @@
     description?: string;
     fields?: FieldsConfig<T>;
     titleSnippet?: Snippet;
-    footerSnippet?: Snippet<[{ linkText?: string; linkHref?: string; linkLabel?: string }]>;
+    footerSnippet?: Snippet<
+      [{ linkText?: string; linkHref?: string; linkLabel?: string }]
+    >;
   }
 
   let {
@@ -69,6 +71,8 @@
     validators: zod4(schema),
     delayMs: 500,
     timeoutMs: 5000,
+    applyAction: false,
+    invalidateAll: false,
     async onUpdate({ form: validatedForm }) {
       if (!validatedForm.valid) return;
       await onSubmit(validatedForm as SuperValidated<SchemaShape<T>, any>);
@@ -78,9 +82,21 @@
   const { form: formData, enhance, delayed } = form;
 </script>
 
-{#snippet standardField(fieldName: string, fieldConfig: BaseFieldConfig & Record<string, any>)}
-  {@const { label, type, showForgotPassword: _, files: __, ...inputProps } = fieldConfig}
-  {@const autocomplete = type === "email" ? (inputProps.autocomplete ?? "email") : inputProps.autocomplete}
+{#snippet standardField(
+  fieldName: string,
+  fieldConfig: BaseFieldConfig & Record<string, any>,
+)}
+  {@const {
+    label,
+    type,
+    showForgotPassword: _,
+    files: __,
+    ...inputProps
+  } = fieldConfig}
+  {@const autocomplete =
+    type === "email"
+      ? (inputProps.autocomplete ?? "email")
+      : inputProps.autocomplete}
   <Form.Field {form} name={fieldName as never}>
     <Form.Control>
       {#snippet children({ props })}
@@ -90,7 +106,7 @@
           {...inputProps}
           type={type as any}
           {autocomplete}
-          bind:value={($formData as any)[fieldName]}
+          bind:value={$formData as any)[fieldName]}
         />
       {/snippet}
     </Form.Control>
@@ -104,8 +120,17 @@
   </Form.Field>
 {/snippet}
 
-{#snippet passwordField(fieldName: string, fieldConfig: BaseFieldConfig & Record<string, any>)}
-  {@const { label, type, showForgotPassword, files: _, ...inputProps } = fieldConfig}
+{#snippet passwordField(
+  fieldName: string,
+  fieldConfig: BaseFieldConfig & Record<string, any>,
+)}
+  {@const {
+    label,
+    type,
+    showForgotPassword,
+    files: _,
+    ...inputProps
+  } = fieldConfig}
   <Form.Field {form} name={fieldName as never}>
     <Form.Control>
       {#snippet children({ props })}
@@ -126,7 +151,7 @@
             {...inputProps}
             type={(showPassword ? "text" : type) as any}
             autocomplete={inputProps.autocomplete ?? "current-password"}
-            bind:value={($formData as any)[fieldName]}
+            bind:value={$formData as any)[fieldName]}
           />
           {#if ($formData as any)[fieldName]}
             <InputGroup.Addon
@@ -208,8 +233,7 @@
       <Field>
         <FieldDescription class="text-center">
           {linkText}
-          <a href={linkHref} class="underline underline-offset-4"
-            >{linkLabel}</a
+          <a href={linkHref} class="underline underline-offset-4">{linkLabel}</a
           >
         </FieldDescription>
       </Field>
