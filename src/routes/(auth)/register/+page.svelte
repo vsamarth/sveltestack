@@ -6,6 +6,7 @@
   import { setError } from "sveltekit-superforms";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { z } from "zod";
+  import { goto, invalidateAll } from "$app/navigation";
 
   type SignupFormData = z.infer<typeof signupSchema>;
 
@@ -24,6 +25,10 @@
             ? "email"
             : "password";
         setError(form, errorField, getErrorMessage(error.code ?? ""));
+      } else {
+        // Invalidate all to refresh session data, then redirect to dashboard
+        await invalidateAll();
+        await goto("/dashboard");
       }
     } catch {
       setError(form, "password", getErrorMessage());
