@@ -20,9 +20,102 @@ const db = drizzle(pool, { schema });
 
 const command = process.argv[2];
 
+// Types for user creation
+interface CreateUserOptions {
+  id?: string;
+  email: string;
+  password: string;
+  name: string;
+  emailVerified?: boolean;
+  workspaceName?: string;
+}
+
+interface CreatedUser {
+  id: string;
+  email: string;
+  name: string;
+  emailVerified: boolean;
+  workspaceId: string;
+}
+
+/**
+ * Creates a complete user with account and workspace
+ */
+async function createUser(options: CreateUserOptions): Promise<CreatedUser> {
+  const {
+    id = ulid(),
+    email,
+    password,
+    name,
+    emailVerified = false,
+    workspaceName = "Personal",
+  } = options;
+
+  const hashedPassword = await hash(password);
+  const workspaceId = ulid();
+
+  // Create user
+  await db.insert(schema.user).values({
+    id,
+    email,
+    name,
+    emailVerified,
+  });
+
+  // Create account with credentials
+  await db.insert(schema.account).values({
+    id: ulid(),
+    userId: id,
+    accountId: id,
+    providerId: "credential",
+    password: hashedPassword,
+  });
+
+  // Create default workspace
+  await db.insert(schema.workspace).values({
+    id: workspaceId,
+    name: workspaceName,
+    ownerId: id,
+  });
+
+  return { id, email, name, emailVerified, workspaceId };
+}
+
+// Import test users from shared fixture (used by both seed and e2e tests)
+// Note: Using relative path for tsx execution
+import { TEST_USERS } from "../../../../tests/fixtures/test-users";
+
+// Convert TEST_USERS object to array for iteration
+const TEST_USERS_ARRAY = Object.values(
+  TEST_USERS,
+) satisfies readonly CreateUserOptions[];
+
+async function createTestUsers() {
+  console.log("👤 Creating test users...");
+
+  const createdUsers: CreatedUser[] = [];
+
+  for (const userConfig of TEST_USERS_ARRAY) {
+    const user = await createUser(userConfig);
+    createdUsers.push(user);
+  }
+
+  console.log("✅ Test users created:");
+  for (const user of createdUsers) {
+    const status = user.emailVerified ? "verified" : "unverified";
+    console.log(`   - ${user.email} (${status})`);
+  }
+
+  return createdUsers;
+}
+
 async function seedDatabase() {
   console.log("🌱 Seeding database...");
 
+  // Create test users first
+  await createTestUsers();
+
+  // Create additional random users
   const userIds = Array.from({ length: 10 }, () => ulid());
   const demoPassword = await hash("demo@123");
 

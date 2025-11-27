@@ -75,7 +75,7 @@
       description: undefined,
     },
     signup: {
-      title: `Create your ${siteConfig.name} account`,
+      title: `Create your account`,
       titleClass: "text-2xl font-semibold tracking-tight",
       submitText: "Create Account",
       linkText: "Already have an account?",
