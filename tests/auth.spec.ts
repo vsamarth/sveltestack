@@ -113,7 +113,7 @@ test.describe("Authentication", () => {
       // Verify we're on sign in page
       await expect(page).toHaveURL("/login");
       await expect(
-        page.getByRole("heading", { name: /Sign in to/i }),
+        page.getByRole("heading", { name: /Sign in/i }),
       ).toBeVisible();
     });
 
