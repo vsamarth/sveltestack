@@ -44,8 +44,6 @@ test.describe("Workspace settings", () => {
     // Scope to main content area to avoid sidebar button
     const main = page.getByRole("main");
 
-    // Find the button that contains the workspace name text
-    // The button contains a span with the workspace name
     const workspaceNameButton = main
       .locator("button")
       .filter({ hasText: original })
@@ -59,42 +57,6 @@ test.describe("Workspace settings", () => {
     await expect(input).toBeVisible();
 
     await input.fill(updated);
-
-    // // Ensure button is visible and ready
-    // await expect(workspaceNameButton).toBeVisible();
-    // await workspaceNameButton.scrollIntoViewIfNeeded();
-
-    // // Try clicking the button using JavaScript to ensure the onclick handler fires
-    // await workspaceNameButton.evaluate((el) => (el as HTMLButtonElement).click());
-
-    // // Wait for the input field to appear (this confirms edit mode is active)
-    // const input = page.getByPlaceholder("Enter workspace name");
-    // await expect(input).toBeVisible({ timeout: 5000 });
-
-    // // Fill in the new name
-    // await input.fill(updated);
-
-    // // Click the Save button (checkmark icon)
-    // await page.getByRole("button", { name: "Save" }).click();
-
-    // // Wait for the update to complete and button to show new name
-    // await expect(main.locator("button").filter({ hasText: updated }).first()).toBeVisible({ timeout: 5000 });
-
-    // // Reset back to original
-    // const updatedButton = main.locator("button").filter({ hasText: updated }).first();
-    // await expect(updatedButton).toBeVisible();
-    // await updatedButton.scrollIntoViewIfNeeded();
-
-    // // Click using JavaScript again
-    // await updatedButton.evaluate((el) => (el as HTMLButtonElement).click());
-
-    // // Wait for input to appear again
-    // await expect(input).toBeVisible({ timeout: 5000 });
-    // await input.fill(original);
-    // await page.getByRole("button", { name: "Save" }).click();
-
-    // // Verify we're back to original name
-    // await expect(main.locator("button").filter({ hasText: original }).first()).toBeVisible({ timeout: 5000 });
   });
 
   test("lists members and allows removing and re-adding a member", async ({
@@ -108,11 +70,9 @@ test.describe("Workspace settings", () => {
       .filter({ hasText: "Member User" })
       .first();
 
-    // Click the Actions button and wait for the dropdown to open
     const actionsButton = memberRow.getByRole("button", { name: "Actions" });
     await actionsButton.click();
 
-    // Wait for the dropdown menu to be visible before clicking the item
     await expect(page.getByRole("menuitem", { name: "Remove" })).toBeVisible();
     await page.getByRole("menuitem", { name: "Remove" }).click();
 
@@ -136,11 +96,9 @@ test.describe("Workspace settings", () => {
       .filter({ hasText: TEST_USERS.invited.email })
       .first();
 
-    // Click the Actions button and wait for the dropdown to open
     const actionsButton = inviteRow.getByRole("button", { name: "Actions" });
     await actionsButton.click();
 
-    // Wait for the dropdown menu to be visible before clicking the item
     await expect(
       page.getByRole("menuitem", { name: "Cancel Invite" }),
     ).toBeVisible();
@@ -197,12 +155,37 @@ test.describe("Workspace settings", () => {
       TEST_USERS.member.workspaceName,
     );
     await memberPage.goto(`/dashboard/workspace/${workspaceId}/settings`);
+
+    await memberPage.waitForLoadState("networkidle");
+
+    await expect(
+      memberPage.getByRole("heading", { name: "Workspace Settings" }),
+    ).toBeVisible();
+
     await memberPage.getByRole("button", { name: "Delete Workspace" }).click();
 
     const dialog = memberPage.getByRole("dialog", { name: "Delete Workspace" });
-    await dialog
-      .getByPlaceholder("Type workspace name to confirm")
-      .fill(TEST_USERS.member.workspaceName);
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    await expect(dialog.getByText(/This action cannot be undone/i)).toBeVisible(
+      { timeout: 5000 },
+    );
+
+    // Wait for the input to be available in the DOM using waitForSelector
+    // This is more reliable when elements are still rendering
+    await memberPage.waitForSelector(
+      'input[placeholder="Type workspace name to confirm"]',
+      { state: "attached", timeout: 10000 },
+    );
+
+    const confirmationInput = dialog.getByPlaceholder(
+      "Type workspace name to confirm",
+    );
+
+    await expect(confirmationInput).toBeVisible({ timeout: 5000 });
+    await expect(confirmationInput).toBeEnabled({ timeout: 5000 });
+
+    await confirmationInput.fill(TEST_USERS.member.workspaceName);
     await dialog.getByRole("button", { name: "Delete Workspace" }).click();
     await expect(
       memberPage.getByText("Failed to delete workspace"),

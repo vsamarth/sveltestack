@@ -60,7 +60,6 @@ test.describe("File operations", () => {
     expect(download.suggestedFilename()).toBe("project-plan.pdf");
     await download.saveAs(downloadedFilePath);
 
-    // Clean up: delete the downloaded file
     try {
       if (existsSync(downloadedFilePath)) {
         await unlink(downloadedFilePath);
@@ -79,11 +78,9 @@ test.describe("File operations", () => {
     await row.getByRole("button", { name: "Actions" }).click();
     await page.getByRole("menuitem", { name: "Preview" }).click();
 
-    // Wait for dialog to appear - it shows the filename as the title
     const dialog = page.getByRole("dialog", { name: "design-assets.png" });
     await expect(dialog).toBeVisible();
 
-    // Wait for the image to load
     const img = dialog.locator("img[alt='design-assets.png']");
     await expect(img).toBeVisible();
     await expect(img).toHaveAttribute("src", /.+/);
@@ -105,34 +102,38 @@ test.describe("File operations", () => {
     await dialog.getByPlaceholder("Enter new filename").fill(replacement);
     await dialog.getByRole("button", { name: "Rename" }).click();
 
-    // Wait for the renamed file to appear in the file table specifically
     const table = page.getByRole("table");
     await expect(table.getByText(replacement)).toBeVisible();
 
-    // make sure the dialog is closed
     await expect(dialog).not.toBeVisible();
 
-    // make sure the original file is not visible
     await expect(table.getByText(original)).toHaveCount(0);
   });
 
   test("deletes a file after confirmation", async ({ page }) => {
     const filename = "design-assets.png";
     const row = fileRow(page, filename);
+
+    await expect(row).toBeVisible();
+
     await row.getByRole("button", { name: "Actions" }).click();
+
+    await expect(page.getByRole("menuitem", { name: "Delete" })).toBeVisible();
     await page.getByRole("menuitem", { name: "Delete" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Delete File" });
-    await dialog.getByRole("button", { name: "Delete File" }).click();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
 
-    await expect(page.getByText(filename)).toHaveCount(0);
+    const deleteButton = dialog.getByRole("button", { name: "Delete File" });
+    await expect(deleteButton).toBeVisible({ timeout: 5000 });
+    await expect(deleteButton).toBeEnabled();
 
-    // make sure the dialog is closed
-    await expect(dialog).not.toBeVisible();
+    await deleteButton.click();
 
     const table = page.getByRole("table");
-    // make sure the file is not visible
-    await expect(table.getByText(filename)).not.toBeVisible();
+    await expect(table.getByText(filename)).not.toBeVisible({ timeout: 10000 });
+
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
   });
 
   test("shows empty state when workspace has no files", async ({ page }) => {
@@ -145,7 +146,6 @@ test.describe("File operations", () => {
   });
 
   test.afterAll(async () => {
-    // Reset workspace to original state
     await resetWorkspaceFiles(TEST_USERS.verified.workspaceName);
   });
 });

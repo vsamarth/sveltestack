@@ -38,21 +38,17 @@ test.describe("File upload", () => {
   test("uploads a single file via Add Files button", async ({ page }) => {
     const filename = `single-upload-${Date.now()}.txt`;
 
-    // Wait for the page to be fully loaded
     await page.waitForLoadState("networkidle");
 
-    // Find the Add Files input
     const fileInput = page.locator(addFilesInputSelector);
     await expect(fileInput).toBeAttached();
 
-    // Set the file
     await fileInput.setInputFiles(makeFile(filename, "Hello world"));
 
     // Wait for upload to complete by checking for file in table (more reliable than toast)
     const table = page.getByRole("table");
     await expect(table.getByText(filename)).toBeVisible({ timeout: 15000 });
 
-    // Verify file row is visible and contains the filename
     const row = fileRow(page, filename);
     await expect(row).toBeVisible();
   });
@@ -60,7 +56,11 @@ test.describe("File upload", () => {
   test("uploads multiple files in one selection", async ({ page }) => {
     const fileA = `multi-a-${Date.now()}.md`;
     const fileB = `multi-b-${Date.now()}.md`;
+
+    await page.waitForLoadState("networkidle");
+
     const fileInput = page.locator(addFilesInputSelector);
+    await expect(fileInput).toBeAttached();
 
     await fileInput.setInputFiles([
       makeFile(fileA, "# Notes"),
@@ -70,28 +70,59 @@ test.describe("File upload", () => {
     // Wait for uploads to complete by checking for files in table (more reliable than toast)
     // Multiple toasts appear for multiple files, so checking table is better
     const table = page.getByRole("table");
-    await expect(table.getByText(fileA)).toBeVisible({ timeout: 15000 });
-    await expect(table.getByText(fileB)).toBeVisible({ timeout: 15000 });
 
-    // Verify both file rows are visible
+    // Wait for both files to appear - check both in parallel to avoid race conditions
+    await Promise.all([
+      expect(table.getByText(fileA)).toBeVisible({ timeout: 15000 }),
+      expect(table.getByText(fileB)).toBeVisible({ timeout: 15000 }),
+    ]);
+
     await expect(fileRow(page, fileA)).toBeVisible();
     await expect(fileRow(page, fileB)).toBeVisible();
   });
 
   test("supports drag and drop anywhere in the dropzone", async ({ page }) => {
+    await page.waitForLoadState("networkidle");
+
     const dropzone = page.getByTestId("file-dropzone");
     const overlay = page.getByTestId("file-dropzone-overlay");
 
-    // Test drag over shows overlay
-    const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
-    await dropzone.dispatchEvent("dragover", { dataTransfer });
-    await expect(overlay).toBeVisible();
+    // useDropzone from @uppy/svelte requires proper drag events with dataTransfer
+    // Simulate drag over by dispatching events with proper dataTransfer properties
+    await dropzone.evaluate((element) => {
+      const dt = new DataTransfer();
+      dt.effectAllowed = "all";
+      dt.dropEffect = "copy";
+      // Add a dummy file to make it more realistic
+      const file = new File(["test"], "test.txt", { type: "text/plain" });
+      dt.items.add(file);
 
-    // Test drag leave hides overlay
-    await dropzone.dispatchEvent("dragleave", { dataTransfer });
-    await expect(overlay).toBeHidden();
+      const event = new DragEvent("dragover", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: dt,
+      });
+      element.dispatchEvent(event);
+    });
 
-    // Upload file via dropzone input
+    // Wait for the overlay to appear (Svelte state update might take a moment)
+    await expect(overlay).toBeVisible({ timeout: 5000 });
+
+    await dropzone.evaluate((element) => {
+      const dt = new DataTransfer();
+      dt.effectAllowed = "all";
+      dt.dropEffect = "none";
+
+      const event = new DragEvent("dragleave", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: dt,
+      });
+      element.dispatchEvent(event);
+    });
+
+    await expect(overlay).toBeHidden({ timeout: 5000 });
+
     const filename = `drag-upload-${Date.now()}.txt`;
     const fileInput = dropzone.locator('input[type="file"]').first();
     await fileInput.setInputFiles(makeFile(filename, "drag drop"));
@@ -112,7 +143,6 @@ test.describe("File upload", () => {
       buffer: largeBuffer,
     });
 
-    // Verify error message appears
     await expect(page.getByText("Upload restriction")).toBeVisible({
       timeout: 5000,
     });
@@ -126,7 +156,6 @@ test.describe("File upload", () => {
 
     await fileInput.setInputFiles(files);
 
-    // Verify error message appears
     await expect(page.getByText("Upload restriction")).toBeVisible({
       timeout: 5000,
     });
@@ -143,7 +172,6 @@ test.describe("File upload", () => {
 
     if (!verifiedUser) return;
 
-    // Get the default workspace
     const defaultWorkspace = await db
       .select()
       .from(workspace)
@@ -193,7 +221,6 @@ test.describe("File upload", () => {
         }
       }
 
-      // Delete from database
       await db
         .delete(file)
         .where(
