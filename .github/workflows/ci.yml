@@ -89,8 +89,18 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run tests
-        run: bun run test
+      - name: Run unit tests with coverage
+        run: bun run test:coverage
+
+      - name: Run E2E tests
+        run: bun run test:e2e
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Stop Docker services
         if: always()

@@ -1,5 +1,8 @@
 # SvelteStack
 
+[![Build and Test](https://github.com/vsamarth/sveltestack/actions/workflows/ci.yml/badge.svg)](https://github.com/vsamarth/sveltestack/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/vsamarth/sveltestack/branch/main/graph/badge.svg)](https://codecov.io/gh/vsamarth/sveltestack)
+
 An open-source, production-ready starter kit for building modern full-stack applications with SvelteKit.
 
 SvelteStack comes with **Vault**, a fully-functional demo application showcasing file storage and workspace management, demonstrating best practices and real-world implementation patterns.

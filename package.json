@@ -23,6 +23,7 @@
     "prepare": "husky",
     "preview": "vite preview",
     "test": "npm run test:unit && npm run test:e2e",
+    "test:coverage": "vitest --run --coverage",
     "test:e2e": "playwright test",
     "test:unit": "vitest --run",
     "test:watch": "vitest"
@@ -82,6 +83,7 @@
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.7",
     "@vitest/browser-playwright": "^4.0.13",
+    "@vitest/coverage-v8": "^4.0.14",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.7",
     "drizzle-seed": "^0.3.1",

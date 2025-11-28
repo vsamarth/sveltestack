@@ -1,6 +1,9 @@
 # Node
 node_modules
 
+# Coverage
+coverage
+
 # Playwright
 test-results
 playwright-report
@@ -13,7 +16,7 @@ playwright/.auth
 .netlify
 .wrangler
 /.svelte-kit
-/build
+/build  
 
 # OS
 .DS_Store

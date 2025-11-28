@@ -16,6 +16,23 @@ export default defineConfig({
   },
   test: {
     expect: { requireAssertions: true },
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html", "lcov"],
+      exclude: [
+        "node_modules/",
+        "tests/",
+        "**/*.d.ts",
+        "**/*.config.*",
+        "**/dist/**",
+        "**/build/**",
+        "**/.svelte-kit/**",
+        "**/coverage/**",
+        "src/app.html",
+        "src/app.d.ts",
+        "src/lib/components/ui/**",
+      ],
+    },
     projects: [
       {
         extends: "./vite.config.ts",
