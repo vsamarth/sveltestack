@@ -98,6 +98,7 @@
     isDeleting = true;
     try {
       const result = await deleteWorkspace(data.workspace.id);
+      await invalidateAll();
       toast.success("Workspace deleted successfully");
       await goto(result.redirectTo);
     } catch (error) {

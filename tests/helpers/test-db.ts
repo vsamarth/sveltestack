@@ -6,13 +6,18 @@ import {
   workspace,
   userPreferences,
   workspaceMember,
-  file,
+  file as fileSchema,
   workspaceInvite,
 } from "$lib/server/db/schema";
 import { hash } from "$lib/server/auth/hash";
 import { ulid } from "ulid";
 import type { User } from "better-auth/types";
 import { randomBytes, createHash } from "node:crypto";
+
+const hashToken = (token: string) =>
+  createHash("sha256").update(token).digest("hex");
+
+const findOne = async <T>(query: Promise<T[]>) => (await query)[0];
 
 export async function createTestUser(options?: {
   id?: string;
@@ -25,39 +30,57 @@ export async function createTestUser(options?: {
   const name = options?.name || "Test User";
   const emailVerified = options?.emailVerified ?? true;
 
-  const hashedPassword = await hash("password123");
+  const existingUser =
+    (await findOne(db.select().from(user).where(eq(user.email, email)))) ||
+    (options?.id
+      ? await findOne(db.select().from(user).where(eq(user.id, id)))
+      : null);
+
+  if (existingUser) {
+    const userId = existingUser.id;
+    if (
+      !(await findOne(
+        db.select().from(account).where(eq(account.userId, userId)),
+      ))
+    ) {
+      await db.insert(account).values({
+        id: ulid(),
+        userId,
+        accountId: userId,
+        providerId: "credential",
+        password: await hash("password123"),
+      });
+    }
+    if (
+      !(await findOne(
+        db
+          .select()
+          .from(userPreferences)
+          .where(eq(userPreferences.userId, userId)),
+      ))
+    ) {
+      await db.insert(userPreferences).values({ userId });
+    }
+    return existingUser;
+  }
 
   const [createdUser] = await db
     .insert(user)
-    .values({
-      id,
-      email,
-      name,
-      emailVerified,
-    })
+    .values({ id, email, name, emailVerified })
     .returning();
 
-  await db.insert(account).values({
-    id: ulid(),
-    userId: id,
-    accountId: id,
-    providerId: "credential",
-    password: hashedPassword,
-  });
+  await Promise.all([
+    db.insert(account).values({
+      id: ulid(),
+      userId: id,
+      accountId: id,
+      providerId: "credential",
+      password: await hash("password123"),
+    }),
+    db.insert(userPreferences).values({ userId: id }),
+  ]);
 
-  await db.insert(userPreferences).values({
-    userId: id,
-  });
-
-  return {
-    id: createdUser.id,
-    name: createdUser.name,
-    email: createdUser.email,
-    emailVerified: createdUser.emailVerified,
-    image: createdUser.image,
-    createdAt: createdUser.createdAt,
-    updatedAt: createdUser.updatedAt,
-  };
+  return createdUser;
 }
 
 export async function createTestWorkspace(options: {
@@ -65,17 +88,15 @@ export async function createTestWorkspace(options: {
   ownerId: string;
   id?: string;
 }) {
-  const workspaceId = options.id || ulid();
-  const [createdWorkspace] = await db
+  const [ws] = await db
     .insert(workspace)
     .values({
-      id: workspaceId,
+      id: options.id || ulid(),
       name: options.name,
       ownerId: options.ownerId,
     })
     .returning();
-
-  return createdWorkspace;
+  return ws;
 }
 
 export async function createTestMember(options: {
@@ -84,18 +105,16 @@ export async function createTestMember(options: {
   role?: "member";
   id?: string;
 }) {
-  const memberId = options.id || ulid();
-  const [createdMember] = await db
+  const [member] = await db
     .insert(workspaceMember)
     .values({
-      id: memberId,
+      id: options.id || ulid(),
       workspaceId: options.workspaceId,
       userId: options.userId,
       role: options.role || "member",
     })
     .returning();
-
-  return createdMember;
+  return member;
 }
 
 export async function createTestFile(options: {
@@ -107,28 +126,21 @@ export async function createTestFile(options: {
   status?: "pending" | "completed" | "failed";
   id?: string;
 }) {
-  const fileId = options.id || ulid();
-  const storageKey =
-    options.storageKey ||
-    `${ulid()}.${options.filename.split(".").pop() || "txt"}`;
-  const [createdFile] = await db
-    .insert(file)
+  const [fileRecord] = await db
+    .insert(fileSchema)
     .values({
-      id: fileId,
+      id: options.id || ulid(),
       workspaceId: options.workspaceId,
       filename: options.filename,
-      storageKey,
+      storageKey:
+        options.storageKey ||
+        `${ulid()}.${options.filename.split(".").pop() || "txt"}`,
       size: (options.size || 0).toString(),
       contentType: options.contentType || "application/octet-stream",
       status: options.status || "completed",
     })
     .returning();
-
-  return createdFile;
-}
-
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+  return fileRecord;
 }
 
 export async function createTestInvite(options: {
@@ -141,33 +153,30 @@ export async function createTestInvite(options: {
   id?: string;
   token?: string;
 }) {
-  const inviteId = options.id || ulid();
   const token = options.token || randomBytes(32).toString("base64url");
-  const tokenHash = hashToken(token);
-
-  const [createdInvite] = await db
+  const [invite] = await db
     .insert(workspaceInvite)
     .values({
-      id: inviteId,
+      id: options.id || ulid(),
       workspaceId: options.workspaceId,
       email: options.email,
       invitedBy: options.invitedBy,
       role: options.role || "member",
-      token: tokenHash,
+      token: hashToken(token),
       expiresAt: options.expiresAt,
       status: options.status || "pending",
     })
     .returning();
-
-  // Return with the original token (not hash) for testing
-  return { ...createdInvite, token };
+  return { ...invite, token };
 }
 
 export async function cleanupTestData(userIds: string[]) {
-  for (const userId of userIds) {
-    await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
-    await db.delete(account).where(eq(account.userId, userId));
-    await db.delete(workspace).where(eq(workspace.ownerId, userId));
-    await db.delete(user).where(eq(user.id, userId));
-  }
+  await Promise.all(
+    userIds.flatMap((userId) => [
+      db.delete(userPreferences).where(eq(userPreferences.userId, userId)),
+      db.delete(account).where(eq(account.userId, userId)),
+      db.delete(workspace).where(eq(workspace.ownerId, userId)),
+      db.delete(user).where(eq(user.id, userId)),
+    ]),
+  );
 }
