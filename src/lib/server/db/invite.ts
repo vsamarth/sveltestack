@@ -108,7 +108,9 @@ export async function createInvite(
   return { ...invite, token };
 }
 
-export async function getInviteByToken(token: string): Promise<WorkspaceInvite> {
+export async function getInviteByToken(
+  token: string,
+): Promise<WorkspaceInvite> {
   const tokenHash = hashToken(token);
 
   return await db

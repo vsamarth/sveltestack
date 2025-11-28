@@ -127,10 +127,19 @@
   }
 
   function getEventIconColor(eventType: WorkspaceActivityEventType): string {
-    if (eventType.includes("deleted") || eventType.includes("removed") || eventType.includes("cancelled")) {
+    if (
+      eventType.includes("deleted") ||
+      eventType.includes("removed") ||
+      eventType.includes("cancelled")
+    ) {
       return "text-destructive";
     }
-    if (eventType.includes("added") || eventType.includes("uploaded") || eventType.includes("created") || eventType.includes("accepted")) {
+    if (
+      eventType.includes("added") ||
+      eventType.includes("uploaded") ||
+      eventType.includes("created") ||
+      eventType.includes("accepted")
+    ) {
       return "text-green-600 dark:text-green-500";
     }
     return "text-muted-foreground";
@@ -243,8 +252,12 @@
     <!-- Date Group -->
     <div class="relative">
       <!-- Date Header -->
-      <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 mb-4 flex items-center gap-4">
-        <div class="bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-xs font-medium border border-border/50">
+      <div
+        class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 mb-4 flex items-center gap-4"
+      >
+        <div
+          class="bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-xs font-medium border border-border/50"
+        >
           {dateGroup}
         </div>
         <div class="h-px flex-1 bg-border/50"></div>
@@ -263,17 +276,26 @@
           >
             <!-- Avatar -->
             <div class="shrink-0 relative z-10">
-              <Avatar.Root class="size-10 sm:size-11 border-2 border-background shadow-sm">
+              <Avatar.Root
+                class="size-10 sm:size-11 border-2 border-background shadow-sm"
+              >
                 {#if activity.actorImage}
-                  <Avatar.Image src={activity.actorImage} alt={activity.actorName} />
+                  <Avatar.Image
+                    src={activity.actorImage}
+                    alt={activity.actorName}
+                  />
                 {/if}
-                <Avatar.Fallback class="text-xs sm:text-sm font-medium bg-muted text-muted-foreground">
+                <Avatar.Fallback
+                  class="text-xs sm:text-sm font-medium bg-muted text-muted-foreground"
+                >
                   {getInitials(activity.actorName)}
                 </Avatar.Fallback>
               </Avatar.Root>
-              
+
               <!-- Event Type Icon Badge -->
-              <div class="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5 shadow-sm">
+              <div
+                class="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5 shadow-sm"
+              >
                 <div class="bg-muted/30 rounded-full p-1">
                   <EventIcon class="size-3 {iconColor}" />
                 </div>
@@ -282,11 +304,15 @@
 
             <!-- Content -->
             <div class="flex-1 min-w-0 pt-0.5">
-              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-4">
+              <div
+                class="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-4"
+              >
                 <div class="flex-1 min-w-0 space-y-1">
                   <!-- Action description -->
                   <p class="text-sm text-foreground/90 leading-relaxed">
-                    <span class="font-semibold text-foreground">{description.action}</span>
+                    <span class="font-semibold text-foreground"
+                      >{description.action}</span
+                    >
                     {#if description.target}
                       <span class="font-medium text-foreground/80 mx-1">
                         {description.target}
@@ -297,7 +323,10 @@
                   <!-- Detail badge -->
                   {#if description.detail}
                     <div class="flex items-center gap-2">
-                      <Badge variant="outline" class="bg-muted/30 text-muted-foreground font-mono text-[10px] px-1.5 h-5 border-border/50">
+                      <Badge
+                        variant="outline"
+                        class="bg-muted/30 text-muted-foreground font-mono text-[10px] px-1.5 h-5 border-border/50"
+                      >
                         {description.detail}
                       </Badge>
                     </div>
@@ -319,12 +348,13 @@
           </div>
         {/each}
       </div>
-      
+
       <!-- Timeline Connector Line -->
       {#if groupIndex < groupedActivities.length - 1}
-        <div class="absolute left-[27px] top-[40px] bottom-[-20px] w-px bg-border/40 -z-10"></div>
+        <div
+          class="absolute left-[27px] top-[40px] bottom-[-20px] w-px bg-border/40 -z-10"
+        ></div>
       {/if}
     </div>
   {/each}
 </div>
-

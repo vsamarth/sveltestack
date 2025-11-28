@@ -8,11 +8,7 @@ import {
   type CreatedInvite,
 } from "./invite";
 import { db } from "$lib/server/db";
-import {
-  workspaceInvite,
-  workspaceMember,
-  workspaceActivity,
-} from "./schema";
+import { workspaceInvite, workspaceMember, workspaceActivity } from "./schema";
 import {
   createTestUser,
   createTestWorkspace,
@@ -88,7 +84,9 @@ describe("invite database functions", () => {
       expect(storedInvite?.token).not.toBe(invite.token);
 
       const events = await getActivityEvents("invite.sent");
-      expect(events.find((event) => event.entityId === invite.id)).toBeDefined();
+      expect(
+        events.find((event) => event.entityId === invite.id),
+      ).toBeDefined();
     });
 
     it("prevents duplicate pending invites for the same email", async () => {
@@ -127,7 +125,9 @@ describe("invite database functions", () => {
 
       await expect(
         acceptInvite(invite.token, otherUser.id, otherUser.email),
-      ).rejects.toThrow("This invitation was sent to a different email address");
+      ).rejects.toThrow(
+        "This invitation was sent to a different email address",
+      );
     });
 
     it("creates membership, logs invite.accepted and member.added", async () => {
@@ -211,13 +211,11 @@ describe("invite database functions", () => {
         owner.id,
       )) as CreatedInvite;
 
-      const nonOwner = trackUser(
-        await createTestUser({ name: "Non Owner" }),
-      );
+      const nonOwner = trackUser(await createTestUser({ name: "Non Owner" }));
 
-      await expect(
-        cancelInvite(invite.id, nonOwner.id),
-      ).rejects.toThrow("Only workspace owners can cancel invites");
+      await expect(cancelInvite(invite.id, nonOwner.id)).rejects.toThrow(
+        "Only workspace owners can cancel invites",
+      );
     });
 
     it("marks invite as cancelled and logs activity", async () => {
@@ -281,4 +279,3 @@ describe("invite database functions", () => {
     });
   });
 });
-

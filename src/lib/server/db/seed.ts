@@ -321,9 +321,20 @@ async function seedActivityEvents(
   defaultWorkspaceId: string,
   personalWorkspaceId: string,
   teamWorkspaceId: string,
-  files: Array<{ id: string; filename: string; size: string; contentType: string | null; workspaceId: string }>,
+  files: Array<{
+    id: string;
+    filename: string;
+    size: string;
+    contentType: string | null;
+    workspaceId: string;
+  }>,
   members: Array<{ workspaceId: string; userId: string; id: string }>,
-  invites: Array<{ id: string; workspaceId: string; email: string; status: string }>,
+  invites: Array<{
+    id: string;
+    workspaceId: string;
+    email: string;
+    status: string;
+  }>,
 ) {
   console.log("📊 Creating activity events...");
 
@@ -456,7 +467,8 @@ async function seedActivityEvents(
 
   // Member addition events (when members were added)
   for (const member of members) {
-    const memberUserDetails = memberUser.id === member.userId ? memberUser : verifiedUser;
+    const memberUserDetails =
+      memberUser.id === member.userId ? memberUser : verifiedUser;
     await createActivityWithTime(
       member.workspaceId,
       memberUserDetails.id,

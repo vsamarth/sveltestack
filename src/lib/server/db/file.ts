@@ -36,7 +36,7 @@ export async function confirmFileUpload(fileId: string, actorId: string) {
     .where(eq(file.id, fileId))
     .returning();
 
-// Log activity
+  // Log activity
   await logFileUploaded(
     fileData.workspaceId,
     actorId,

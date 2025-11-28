@@ -50,4 +50,3 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     },
   };
 };
-

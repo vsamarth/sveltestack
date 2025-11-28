@@ -5,7 +5,11 @@
   import { page } from "$app/state";
   import ActivityFeed from "$lib/components/activity-feed.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { ChevronLeftIcon, ChevronRightIcon, ActivityIcon } from "@lucide/svelte";
+  import {
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    ActivityIcon,
+  } from "@lucide/svelte";
 
   let { data }: { data: PageData } = $props();
 
@@ -25,9 +29,7 @@
     <!-- Page Header -->
     <div class="flex items-end justify-between mb-8">
       <div>
-        <h2 class="text-2xl font-semibold tracking-tight mb-2">
-          Activity
-        </h2>
+        <h2 class="text-2xl font-semibold tracking-tight mb-2">Activity</h2>
         <p class="text-muted-foreground">
           Recent activity in {data.workspace.name}
         </p>
@@ -37,11 +39,7 @@
     <!-- Activity Feed -->
     {#if data.activities.length === 0}
       <!-- Empty State -->
-      <div
-        role="region"
-        aria-label="Empty activity state"
-        class="w-full"
-      >
+      <div role="region" aria-label="Empty activity state" class="w-full">
         <div
           class="bg-card border border-border rounded-lg shadow-sm py-16 px-8 flex flex-col items-center justify-center min-h-[400px]"
         >
