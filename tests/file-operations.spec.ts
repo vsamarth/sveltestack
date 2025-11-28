@@ -53,6 +53,8 @@ test.describe("File operations", () => {
     const row = fileRow(page, "project-plan.pdf");
     await row.getByRole("button", { name: "Actions" }).click();
 
+    await expect(page.getByRole("menuitem", { name: "Download" })).toBeVisible();
+
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("menuitem", { name: "Download" }).click();
     const download = await downloadPromise;
@@ -76,6 +78,8 @@ test.describe("File operations", () => {
   test("previews an image file in the dialog", async ({ page }) => {
     const row = fileRow(page, "design-assets.png");
     await row.getByRole("button", { name: "Actions" }).click();
+
+    await expect(page.getByRole("menuitem", { name: "Preview" })).toBeVisible();
     await page.getByRole("menuitem", { name: "Preview" }).click();
 
     const dialog = page.getByRole("dialog", { name: "design-assets.png" });
@@ -96,6 +100,8 @@ test.describe("File operations", () => {
 
     const row = fileRow(page, original);
     await row.getByRole("button", { name: "Actions" }).click();
+
+    await expect(page.getByRole("menuitem", { name: "Rename" })).toBeVisible();
     await page.getByRole("menuitem", { name: "Rename" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Rename File" });

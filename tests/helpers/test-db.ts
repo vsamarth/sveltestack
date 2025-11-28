@@ -8,6 +8,7 @@ import {
   workspaceMember,
   file as fileSchema,
   workspaceInvite,
+  workspaceActivity,
 } from "$lib/server/db/schema";
 import { hash } from "$lib/server/auth/hash";
 import { ulid } from "ulid";
@@ -171,8 +172,18 @@ export async function createTestInvite(options: {
 }
 
 export async function cleanupTestData(userIds: string[]) {
+  // Delete workspace_activity records first to avoid foreign key constraint violations
+  await Promise.all(
+    userIds.map((userId) =>
+      db.delete(workspaceActivity).where(eq(workspaceActivity.actorId, userId)),
+    ),
+  );
+
+  // Then delete all other related records and users
   await Promise.all(
     userIds.flatMap((userId) => [
+      db.delete(workspaceMember).where(eq(workspaceMember.userId, userId)),
+      db.delete(workspaceInvite).where(eq(workspaceInvite.invitedBy, userId)),
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)),
       db.delete(account).where(eq(account.userId, userId)),
       db.delete(workspace).where(eq(workspace.ownerId, userId)),

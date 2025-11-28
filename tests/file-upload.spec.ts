@@ -5,6 +5,7 @@ import { file, workspace, user } from "$lib/server/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { deleteFileFromStorage } from "$lib/server/storage";
 import { TEST_USERS } from "./fixtures/test-users";
+import { resetWorkspaceFiles } from "./helpers/workspace-reset";
 
 test.use({ storageState: AUTH_STATES.verified });
 
@@ -230,5 +231,8 @@ test.describe("File upload", () => {
           ),
         );
     }
+
+    // Reset workspace to seeded state after cleaning up test files
+    await resetWorkspaceFiles(TEST_USERS.verified.workspaceName);
   });
 });
