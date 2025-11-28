@@ -22,7 +22,11 @@
   });
 </script>
 
-<div {...getRootProps()} class="relative w-full h-full outline-none">
+<div
+  {...getRootProps()}
+  class="relative w-full h-full outline-none"
+  data-testid="file-dropzone"
+>
   <input {...getInputProps()} class="hidden sr-only" />
 
   {@render children()}
@@ -30,6 +34,7 @@
   {#if isDragging}
     <div
       class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-2 bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg pointer-events-none"
+      data-testid="file-dropzone-overlay"
     >
       <div class={emptyMediaVariants({ variant: "icon" })}>
         <CloudIcon />

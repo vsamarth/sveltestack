@@ -10,6 +10,7 @@ import {
   setLastActiveWorkspace as setLastActiveWorkspaceDb,
   getWorkspaceById,
 } from "$lib/server/db/workspace";
+import { hasWorkspaceAccess } from "$lib/server/db/membership";
 
 export const createWorkspace = command(z.string(), async (name) => {
   const { locals } = getRequestEvent();
@@ -40,16 +41,23 @@ export const updateWorkspace = command(
       error(401, "Unauthorized");
     }
 
+    // Check if workspace exists
+    const workspace = await getWorkspaceById(workspaceId);
+    if (!workspace) {
+      error(404, "Workspace not found");
+    }
+
+    // Check if user owns the workspace
+    if (!(await userOwnsWorkspace(workspaceId, locals.user.id))) {
+      error(403, "Forbidden");
+    }
+
     try {
-      if (await userOwnsWorkspace(workspaceId, locals.user.id)) {
-        const workspace = await updateWorkspaceDb(workspaceId, name);
-        return {
-          id: workspace.id,
-          name: workspace.name,
-        };
-      } else {
-        error(403, "Forbidden");
-      }
+      const updated = await updateWorkspaceDb(workspaceId, name);
+      return {
+        id: updated.id,
+        name: updated.name,
+      };
     } catch (err) {
       console.error("Failed to update workspace:", err);
       error(500, "Failed to update workspace");
@@ -109,7 +117,9 @@ export const setLastActiveWorkspace = command(
         error(404, "Workspace not found");
       }
 
-      if (workspace.ownerId !== locals.user.id) {
+      // Check if user has access to the workspace (owner or member)
+      const hasAccess = await hasWorkspaceAccess(workspaceId, locals.user.id);
+      if (!hasAccess) {
         error(403, "Forbidden");
       }
 

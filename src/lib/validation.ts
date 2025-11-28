@@ -44,3 +44,12 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;
+
+export const inviteSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .check(z.email("Invalid email address.")),
+});
+
+export type InviteSchema = z.infer<typeof inviteSchema>;

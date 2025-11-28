@@ -1,6 +1,36 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isCI = !!process.env.CI;
+const authFile = path.join(__dirname, "playwright/.auth/verified.json");
+
+const browserProjects = isCI
+  ? [
+      {
+        name: "chromium",
+        use: { ...devices["Desktop Chrome"], storageState: authFile },
+        dependencies: ["setup"],
+      },
+      {
+        name: "firefox",
+        use: { ...devices["Desktop Firefox"], storageState: authFile },
+        dependencies: ["setup"],
+      },
+      {
+        name: "webkit",
+        use: { ...devices["Desktop Safari"], storageState: authFile },
+        dependencies: ["setup"],
+      },
+    ]
+  : [
+      {
+        name: "chromium",
+        use: { ...devices["Desktop Chrome"], storageState: authFile },
+        dependencies: ["setup"],
+      },
+    ];
 
 export default defineConfig({
   testDir: "tests",
@@ -14,15 +44,13 @@ export default defineConfig({
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    video: !isCI ? "on" : "off",
   },
 
-  projects: isCI
-    ? [
-        { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-        { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-        { name: "webkit", use: { ...devices["Desktop Safari"] } },
-      ]
-    : [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    ...browserProjects,
+  ],
 
   webServer: {
     command: "npm run db:reset-seed && npm run build && npm run preview",

@@ -3,6 +3,7 @@ import { env } from "./env";
 import { render } from "@react-email/components";
 import VerifyEmail from "$lib/emails/verify-email";
 import ResetPassword from "$lib/emails/reset-password";
+import WorkspaceInvite from "$lib/emails/workspace-invite";
 import * as React from "react";
 
 const resend = env.EMAIL_API_KEY ? new Resend(env.EMAIL_API_KEY) : null;
@@ -104,6 +105,60 @@ export async function sendResetPasswordEmail({
     return data;
   } catch (error) {
     console.error("Error sending reset password email:", error);
+    throw error;
+  }
+}
+
+export async function sendWorkspaceInviteEmail({
+  email,
+  url,
+  workspaceName,
+  inviterName,
+}: {
+  email: string;
+  url: string;
+  workspaceName: string;
+  inviterName: string;
+}) {
+  if (!isEmailConfigured()) {
+    console.log(
+      "📧 [Email not configured] Workspace invite email would be sent:",
+      {
+        to: email,
+        subject: `You've been invited to join ${workspaceName}`,
+        url,
+        workspaceName,
+        inviterName,
+      },
+    );
+    return null;
+  }
+
+  const html = await render(
+    React.createElement(WorkspaceInvite, {
+      url,
+      workspaceName,
+      inviterName,
+      inviteeEmail: email,
+    }),
+  );
+
+  try {
+    const { data, error } = await resend!.emails.send({
+      from: env.EMAIL_FROM!,
+      to: email,
+      subject: `You've been invited to join ${workspaceName}`,
+      html,
+    });
+
+    if (error) {
+      console.error("Error sending workspace invite email:", error);
+      throw new Error("Failed to send workspace invite email");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error sending workspace invite email:", error);
     throw error;
   }
 }

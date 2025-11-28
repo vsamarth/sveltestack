@@ -1,7 +1,5 @@
-import {
-  getLastActiveWorkspace,
-  getWorkspaces,
-} from "$lib/server/db/workspace";
+import { getLastActiveWorkspace } from "$lib/server/db/workspace";
+import { getUserWorkspaces } from "$lib/server/db/membership";
 import type { PageServerLoad } from "./$types";
 import { error, redirect } from "@sveltejs/kit";
 
@@ -13,9 +11,9 @@ export const load: PageServerLoad = async ({ locals }) => {
   const userId = locals.user.id;
 
   try {
-    const [lastWorkspace, workspaces] = await Promise.all([
+    const [lastWorkspace, { all: workspaces }] = await Promise.all([
       getLastActiveWorkspace(userId),
-      getWorkspaces(userId),
+      getUserWorkspaces(userId),
     ]);
 
     if (lastWorkspace) {

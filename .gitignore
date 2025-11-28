@@ -1,10 +1,14 @@
 # Node
 node_modules
 
+# Coverage
+coverage
+
 # Playwright
 test-results
 playwright-report
 blob-report
+playwright/.auth
 
 # Output
 .output
@@ -12,7 +16,7 @@ blob-report
 .netlify
 .wrangler
 /.svelte-kit
-/build
+/build  
 
 # OS
 .DS_Store

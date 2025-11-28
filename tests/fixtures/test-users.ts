@@ -12,6 +12,24 @@ export const TEST_USERS = {
     emailVerified: true,
     workspaceName: "Test Workspace",
   },
+  /** Secondary collaborator with verified email */
+  member: {
+    id: "test-user-member",
+    email: "member@example.com",
+    password: "password123",
+    name: "Member User",
+    emailVerified: true,
+    workspaceName: "Member Workspace",
+  },
+  /** User that will be targeted by invites */
+  invited: {
+    id: "test-user-invited",
+    email: "invited@example.com",
+    password: "password123",
+    name: "Invited User",
+    emailVerified: true,
+    workspaceName: "Invited Workspace",
+  },
   /** Unverified user - has account but email not verified */
   unverified: {
     id: "test-user-unverified",

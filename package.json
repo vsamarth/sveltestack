@@ -22,8 +22,10 @@
     "lint": "prettier --check . && eslint .",
     "prepare": "husky",
     "preview": "vite preview",
-    "test": "vitest --run && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:coverage": "vitest --run --coverage",
     "test:e2e": "playwright test",
+    "test:unit": "vitest --run",
     "test:watch": "vitest"
   },
   "prettier": {
@@ -37,15 +39,6 @@
           "parser": "svelte"
         }
       }
-    ]
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,svelte}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,md,css,html,yml,yaml}": [
-      "prettier --write"
     ]
   },
   "dependencies": {
@@ -90,6 +83,7 @@
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.7",
     "@vitest/browser-playwright": "^4.0.13",
+    "@vitest/coverage-v8": "^4.0.14",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.7",
     "drizzle-seed": "^0.3.1",
@@ -97,7 +91,6 @@
     "eslint-plugin-svelte": "^3.13.0",
     "globals": "^16.5.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
     "mode-watcher": "^1.1.0",
     "playwright": "^1.56.1",
     "prettier": "^3.6.2",

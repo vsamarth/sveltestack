@@ -1,77 +1,73 @@
 <script lang="ts">
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import * as Collapsible from "$lib/components/ui/collapsible/index.js";
   import type { ComponentProps } from "svelte";
   import type { User, Workspace } from "$lib/server/db/schema";
   import {
-    EllipsisIcon,
-    Trash2Icon,
     PlusIcon,
-    PencilIcon,
+    ChevronRightIcon,
+    FolderIcon,
+    SettingsIcon,
   } from "@lucide/svelte";
   import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
   import { Button } from "$lib/components/ui/button";
-  import * as DropdownMenu from "./ui/dropdown-menu";
-  import * as Tooltip from "./ui/tooltip";
-  import * as Dialog from "./ui/dialog";
   import { page } from "$app/state";
   import NavUser from "./nav-user.svelte";
   import WorkspaceFormDialog from "./workspace-form-dialog.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
-  import { deleteWorkspace } from "$lib/remote/workspace.remote";
-  import { goto, invalidateAll } from "$app/navigation";
 
   type Props = ComponentProps<typeof Sidebar.Root> & {
-    workspaces?: Workspace[];
+    ownedWorkspaces?: Workspace[];
+    memberWorkspaces?: Workspace[];
     user: User;
     workspaceForm?: SuperValidated<WorkspaceSchema>;
   };
 
   let {
-    workspaces = [],
+    ownedWorkspaces = [],
+    memberWorkspaces = [],
     user,
     workspaceForm,
     ref = $bindable(null),
     ...restProps
   }: Props = $props();
 
-  const sidebar = Sidebar.useSidebar();
   let dialogOpen = $state(false);
-  let dialogMode = $state<"create" | "rename">("create");
-  let selectedWorkspaceId = $state("");
-  let selectedWorkspaceName = $state("");
-  let deleteDialogOpen = $state(false);
-  let workspaceToDelete = $state<{ id: string; name: string } | null>(null);
 
   function openCreateDialog() {
-    dialogMode = "create";
     dialogOpen = true;
   }
 
-  function openRenameDialog(workspaceId: string, name: string) {
-    dialogMode = "rename";
-    selectedWorkspaceId = workspaceId;
-    selectedWorkspaceName = name;
-    dialogOpen = true;
-  }
+  // Track which workspaces are expanded
+  let expandedWorkspaces = $state<Set<string>>(new Set());
 
-  function openDeleteWorkspaceDialog(workspaceId: string, name: string) {
-    workspaceToDelete = { id: workspaceId, name };
-    deleteDialogOpen = true;
-  }
-
-  async function confirmDeleteWorkspace() {
-    if (!workspaceToDelete) return;
-
-    try {
-      const result = await deleteWorkspace(workspaceToDelete.id);
-      deleteDialogOpen = false;
-      workspaceToDelete = null;
-      await invalidateAll();
-      await goto(result.redirectTo);
-    } catch (error) {
-      console.error("Failed to delete workspace:", error);
+  // Auto-expand the current workspace
+  $effect(() => {
+    if (page.params.id) {
+      expandedWorkspaces.add(page.params.id);
+      expandedWorkspaces = expandedWorkspaces;
     }
+  });
+
+  function toggleWorkspace(id: string) {
+    if (expandedWorkspaces.has(id)) {
+      expandedWorkspaces.delete(id);
+    } else {
+      expandedWorkspaces.add(id);
+    }
+    expandedWorkspaces = expandedWorkspaces;
+  }
+
+  function isWorkspaceActive(workspaceId: string): boolean {
+    return page.params.id === workspaceId;
+  }
+
+  function isSubPageActive(workspaceId: string, subPage: string): boolean {
+    return (
+      page.params.id === workspaceId &&
+      page.url.pathname.includes(`/${subPage}`)
+    );
   }
 </script>
 
@@ -87,9 +83,10 @@
     </div>
   </Sidebar.Header>
   <Sidebar.Content>
+    <!-- My Workspaces Section -->
     <Sidebar.Group>
       <div class="flex items-center justify-between px-2 py-1.5">
-        <Sidebar.GroupLabel class="text-xs">Workspaces</Sidebar.GroupLabel>
+        <Sidebar.GroupLabel class="text-xs">My Workspaces</Sidebar.GroupLabel>
         <Button
           variant="ghost"
           size="icon"
@@ -101,68 +98,121 @@
         </Button>
       </div>
       <Sidebar.Menu>
-        {#each workspaces as item (item.name)}
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton isActive={page.params.id === item.id}>
-              {#snippet child({ props })}
-                <a href={`/dashboard/workspace/${item.id}`} {...props}>
-                  <!-- <item.icon /> -->
-                  <span>{item.name}</span>
-                </a>
-              {/snippet}
-            </Sidebar.MenuButton>
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger>
+        {#each ownedWorkspaces as workspace (workspace.id)}
+          <Collapsible.Root
+            open={expandedWorkspaces.has(workspace.id)}
+            onOpenChange={() => toggleWorkspace(workspace.id)}
+            class="group/collapsible"
+          >
+            <Sidebar.MenuItem>
+              <Collapsible.Trigger class="w-full">
                 {#snippet child({ props })}
-                  <Sidebar.MenuAction showOnHover {...props}>
-                    <EllipsisIcon />
-                    <span class="sr-only">More</span>
-                  </Sidebar.MenuAction>
-                {/snippet}
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content
-                class="w-48"
-                side={sidebar.isMobile ? "bottom" : "right"}
-                align={sidebar.isMobile ? "end" : "start"}
-              >
-                <DropdownMenu.Item
-                  onclick={() => openRenameDialog(item.id, item.name)}
-                >
-                  <PencilIcon class="text-muted-foreground" />
-                  <span>Rename Workspace</span>
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                {#if workspaces.length <= 1}
-                  <Tooltip.Root>
-                    <Tooltip.Trigger>
-                      {#snippet child({ props: tooltipProps })}
-                        <div {...tooltipProps}>
-                          <DropdownMenu.Item disabled={true}>
-                            <Trash2Icon class="text-muted-foreground" />
-                            <span>Delete Workspace</span>
-                          </DropdownMenu.Item>
-                        </div>
-                      {/snippet}
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>
-                      <p>Cannot delete your last workspace</p>
-                    </Tooltip.Content>
-                  </Tooltip.Root>
-                {:else}
-                  <DropdownMenu.Item
-                    onclick={() =>
-                      openDeleteWorkspaceDialog(item.id, item.name)}
+                  <Sidebar.MenuButton
+                    {...props}
+                    isActive={isWorkspaceActive(workspace.id)}
+                    class="pr-2"
                   >
-                    <Trash2Icon class="text-muted-foreground" />
-                    <span>Delete Workspace</span>
-                  </DropdownMenu.Item>
-                {/if}
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
-          </Sidebar.MenuItem>
+                    <ChevronRightIcon
+                      class="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                    />
+                    <span class="truncate">{workspace.name}</span>
+                  </Sidebar.MenuButton>
+                {/snippet}
+              </Collapsible.Trigger>
+              <Collapsible.Content>
+                <Sidebar.MenuSub>
+                  <Sidebar.MenuSubItem>
+                    <Sidebar.MenuSubButton
+                      isActive={isSubPageActive(workspace.id, "files")}
+                    >
+                      {#snippet child({ props })}
+                        <a
+                          href={`/dashboard/workspace/${workspace.id}/files`}
+                          {...props}
+                        >
+                          <FolderIcon class="h-4 w-4" />
+                          <span>Files</span>
+                        </a>
+                      {/snippet}
+                    </Sidebar.MenuSubButton>
+                  </Sidebar.MenuSubItem>
+                  <Sidebar.MenuSubItem>
+                    <Sidebar.MenuSubButton
+                      isActive={isSubPageActive(workspace.id, "settings")}
+                    >
+                      {#snippet child({ props })}
+                        <a
+                          href={`/dashboard/workspace/${workspace.id}/settings`}
+                          {...props}
+                        >
+                          <SettingsIcon class="h-4 w-4" />
+                          <span>Settings</span>
+                        </a>
+                      {/snippet}
+                    </Sidebar.MenuSubButton>
+                  </Sidebar.MenuSubItem>
+                </Sidebar.MenuSub>
+              </Collapsible.Content>
+            </Sidebar.MenuItem>
+          </Collapsible.Root>
         {/each}
       </Sidebar.Menu>
     </Sidebar.Group>
+
+    <!-- Shared with me Section -->
+    {#if memberWorkspaces.length > 0}
+      <Sidebar.Group>
+        <div class="flex items-center justify-between px-2 py-1.5">
+          <Sidebar.GroupLabel class="text-xs">Shared with me</Sidebar.GroupLabel
+          >
+        </div>
+        <Sidebar.Menu>
+          {#each memberWorkspaces as workspace (workspace.id)}
+            <Collapsible.Root
+              open={expandedWorkspaces.has(workspace.id)}
+              onOpenChange={() => toggleWorkspace(workspace.id)}
+              class="group/collapsible"
+            >
+              <Sidebar.MenuItem>
+                <Collapsible.Trigger class="w-full">
+                  {#snippet child({ props })}
+                    <Sidebar.MenuButton
+                      {...props}
+                      isActive={isWorkspaceActive(workspace.id)}
+                      class="pr-2"
+                    >
+                      <ChevronRightIcon
+                        class="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                      />
+                      <span class="truncate">{workspace.name}</span>
+                    </Sidebar.MenuButton>
+                  {/snippet}
+                </Collapsible.Trigger>
+                <Collapsible.Content>
+                  <Sidebar.MenuSub>
+                    <Sidebar.MenuSubItem>
+                      <Sidebar.MenuSubButton
+                        isActive={isSubPageActive(workspace.id, "files")}
+                      >
+                        {#snippet child({ props })}
+                          <a
+                            href={`/dashboard/workspace/${workspace.id}/files`}
+                            {...props}
+                          >
+                            <FolderIcon class="h-4 w-4" />
+                            <span>Files</span>
+                          </a>
+                        {/snippet}
+                      </Sidebar.MenuSubButton>
+                    </Sidebar.MenuSubItem>
+                  </Sidebar.MenuSub>
+                </Collapsible.Content>
+              </Sidebar.MenuItem>
+            </Collapsible.Root>
+          {/each}
+        </Sidebar.Menu>
+      </Sidebar.Group>
+    {/if}
   </Sidebar.Content>
   <Sidebar.Footer>
     <NavUser {user} />
@@ -174,37 +224,6 @@
   <WorkspaceFormDialog
     bind:open={dialogOpen}
     data={workspaceForm}
-    mode={dialogMode}
-    workspaceId={selectedWorkspaceId}
-    currentName={selectedWorkspaceName}
+    mode="create"
   />
 {/if}
-
-<!-- Delete Workspace Confirmation Dialog -->
-<Dialog.Root bind:open={deleteDialogOpen}>
-  <Dialog.Content class="sm:max-w-md">
-    <Dialog.Header>
-      <Dialog.Title>Delete Workspace</Dialog.Title>
-      <Dialog.Description>
-        Are you sure you want to delete
-        <span class="font-semibold">{workspaceToDelete?.name}</span>? This
-        action cannot be undone and all files in this workspace will be
-        permanently removed.
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer class="gap-2">
-      <Button
-        variant="outline"
-        onclick={() => {
-          deleteDialogOpen = false;
-          workspaceToDelete = null;
-        }}
-      >
-        Cancel
-      </Button>
-      <Button variant="destructive" onclick={confirmDeleteWorkspace}>
-        Delete Workspace
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>

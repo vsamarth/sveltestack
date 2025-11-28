@@ -16,13 +16,11 @@
   import {
     getPresignedUploadUrlRemote,
     confirmUpload,
-  } from "$lib/remote/upload.remote";
-  import {
     deleteFile,
     renameFile,
     getFilePreviewUrl,
     getFileDownloadUrl,
-  } from "$lib/remote/file.remote";
+  } from "$lib/remote/actions.remote";
 
   let { data }: { data: PageData } = $props();
 
@@ -240,7 +238,7 @@
 </script>
 
 <svelte:head>
-  <title>{data.workspace.name} | {siteConfig.name}</title>
+  <title>Files - {data.workspace.name} | {siteConfig.name}</title>
   <meta
     name="description"
     content="Securely manage files and uploads in the {data.workspace
