@@ -63,7 +63,7 @@ export const actions: Actions = {
         return fail(403, { error: "Forbidden" });
       }
 
-      await deleteFile(fileId);
+      await deleteFile(fileId, locals.user.id);
       return { success: true };
     } catch (err) {
       console.error("Delete file error:", err);
@@ -103,7 +103,7 @@ export const actions: Actions = {
         return fail(403, { error: "Forbidden" });
       }
 
-      await renameFile(fileId, newFilename.trim());
+      await renameFile(fileId, newFilename.trim(), locals.user.id);
       return { success: true };
     } catch (err) {
       console.error("Rename file error:", err);

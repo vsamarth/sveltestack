@@ -10,7 +10,6 @@ import {
   getFileById,
 } from "$lib/server/db/file";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
-import { logFileUploaded } from "$lib/server/db/activity";
 
 export const getPresignedUploadUrlRemote = command(
   z.object({
@@ -95,21 +94,11 @@ export const confirmUpload = command(
     }
 
     // Mark file as completed
-    const updatedFile = await confirmFileUpload(fileId);
+    const updatedFile = await confirmFileUpload(fileId, locals.user.id);
 
     if (!updatedFile) {
       error(404, "File not found");
     }
-
-    // Log activity
-    await logFileUploaded(
-      updatedFile.workspaceId,
-      locals.user.id,
-      updatedFile.id,
-      updatedFile.filename,
-      updatedFile.size,
-      updatedFile.contentType || undefined,
-    );
 
     return { success: true, file: updatedFile };
   },

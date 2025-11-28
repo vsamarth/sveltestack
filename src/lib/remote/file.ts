@@ -12,11 +12,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { S3Client } from "@aws-sdk/client-s3";
 import { env } from "$lib/server/env";
 import { getPresignedDownloadUrl } from "$lib/server/storage";
-import {
-  logFileDeleted,
-  logFileRenamed,
-  logFileDownloaded,
-} from "$lib/server/db/activity";
+import { logFileDownloaded } from "$lib/server/db/activity";
 
 const s3Client = new S3Client({
   endpoint: env.STORAGE_ENDPOINT,
@@ -49,15 +45,7 @@ export const deleteFile = command(z.string(), async (fileId) => {
       error(403, "Forbidden");
     }
 
-    await deleteFileDb(fileId);
-
-    // Log activity
-    await logFileDeleted(
-      file.workspaceId,
-      locals.user.id,
-      fileId,
-      file.filename,
-    );
+    await deleteFileDb(fileId, locals.user.id);
 
     return { success: true };
   } catch (err) {
@@ -102,16 +90,7 @@ export const renameFile = command(
         error(403, "Forbidden");
       }
 
-      await renameFileDb(fileId, newFilename.trim());
-
-      // Log activity
-      await logFileRenamed(
-        file.workspaceId,
-        locals.user.id,
-        fileId,
-        file.filename,
-        newFilename.trim(),
-      );
+      await renameFileDb(fileId, newFilename.trim(), locals.user.id);
 
       return { success: true };
     } catch (err) {
@@ -164,18 +143,6 @@ export const getFilePreviewUrl = command(z.string(), async (fileId) => {
     const previewUrl = await getSignedUrl(s3Client, getObjectCommand, {
       expiresIn: 3600,
     });
-
-    // We typically don't log "preview" as "download", or maybe we do?
-    // User asked for "file.downloaded" event.
-    // Preview is essentially a download.
-    // I'll log it as downloaded for now, or skip if it's just a preview.
-    // The event list had "file.downloaded".
-    // Let's log it.
-    // Wait, preview might be triggered often. "Downloaded" usually implies "Save As".
-    // The `getFileDownloadUrl` is definitely for download.
-    // `getFilePreviewUrl` is for viewing.
-    // I'll skip logging for preview to avoid noise, and only log explicit download.
-
     return {
       url: previewUrl,
       filename: file.filename,

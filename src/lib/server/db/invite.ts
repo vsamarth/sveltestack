@@ -1,7 +1,19 @@
 import { db } from ".";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { workspaceInvite, workspaceMember, workspace, user } from "./schema";
+import {
+  workspaceInvite,
+  workspaceMember,
+  workspace,
+  user,
+  type WorkspaceInvite,
+} from "./schema";
 import { randomBytes, createHash } from "node:crypto";
+import {
+  logInviteSent,
+  logInviteAccepted,
+  logInviteCancelled,
+  logMemberAdded,
+} from "./activity";
 
 function generateInviteToken(): string {
   return randomBytes(32).toString("base64url");
@@ -11,21 +23,39 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+export type CreatedInvite = WorkspaceInvite & { token: string };
+
 export async function createInvite(
   workspaceId: string,
   email: string,
   invitedBy: string,
   role: "member" = "member",
   expiresAt?: Date,
-) {
-  // Check for existing pending invite for this email and workspace
+): Promise<CreatedInvite> {
+  const normalizedEmail = email.toLowerCase();
+
+  const workspaceRecord = await db
+    .select({ id: workspace.id, ownerId: workspace.ownerId })
+    .from(workspace)
+    .where(eq(workspace.id, workspaceId))
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (!workspaceRecord) {
+    throw new Error("Workspace not found");
+  }
+
+  if (workspaceRecord.ownerId !== invitedBy) {
+    throw new Error("Only workspace owners can invite members");
+  }
+
   const existingInvite = await db
     .select({ id: workspaceInvite.id })
     .from(workspaceInvite)
     .where(
       and(
         eq(workspaceInvite.workspaceId, workspaceId),
-        eq(workspaceInvite.email, email),
+        eq(workspaceInvite.email, normalizedEmail),
         eq(workspaceInvite.status, "pending"),
       ),
     )
@@ -35,54 +65,50 @@ export async function createInvite(
     throw new Error("A pending invite already exists for this email");
   }
 
-  // Generate unique token
-  let token: string = "";
-  let tokenHash: string = "";
-  let attempts = 0;
+  let token: string | null = null;
+  let tokenHash: string | null = null;
   const maxAttempts = 10;
 
-  while (attempts < maxAttempts) {
-    token = generateInviteToken();
-    tokenHash = hashToken(token);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const candidate = generateInviteToken();
+    const candidateHash = hashToken(candidate);
 
-    // Check if hash already exists (extremely unlikely but possible)
-    const existing = await db
+    const duplicateToken = await db
       .select({ id: workspaceInvite.id })
       .from(workspaceInvite)
-      .where(eq(workspaceInvite.token, tokenHash))
+      .where(eq(workspaceInvite.token, candidateHash))
       .limit(1);
 
-    if (existing.length === 0) {
+    if (duplicateToken.length === 0) {
+      token = candidate;
+      tokenHash = candidateHash;
       break;
     }
-
-    attempts++;
   }
 
-  if (attempts >= maxAttempts || !tokenHash || tokenHash === "") {
+  if (!token || !tokenHash) {
     throw new Error("Failed to generate unique invite token");
   }
 
-  const result = await db
+  const [invite] = await db
     .insert(workspaceInvite)
     .values({
       workspaceId,
-      email,
+      email: normalizedEmail,
       invitedBy,
       role,
-      token: tokenHash, // Store hashed token
+      token: tokenHash,
       expiresAt,
       status: "pending",
     })
     .returning();
 
-  // Return the invite with the original token (not the hash) for the caller
-  // This allows the caller to use the token in emails/URLs
-  return { ...result[0], token };
+  await logInviteSent(workspaceId, invitedBy, invite.id, normalizedEmail, role);
+
+  return { ...invite, token };
 }
 
-export async function getInviteByToken(token: string) {
-  // Hash the provided token to compare with stored hash
+export async function getInviteByToken(token: string): Promise<WorkspaceInvite> {
   const tokenHash = hashToken(token);
 
   return await db
@@ -176,16 +202,21 @@ export async function acceptInvite(
     )
     .limit(1);
 
+  // Update invite status
+  await db
+    .update(workspaceInvite)
+    .set({
+      status: "accepted",
+      acceptedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(workspaceInvite.id, invite.id));
+
+  // Log invite accepted
+  await logInviteAccepted(invite.workspaceId, userId, invite.id, invite.email);
+
   if (existingMember.length > 0) {
-    // User is already a member, mark invite as accepted anyway
-    await db
-      .update(workspaceInvite)
-      .set({
-        status: "accepted",
-        acceptedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaceInvite.id, invite.id));
+    // User is already a member, don't log member.added
     return { invite, membership: existingMember[0] };
   }
 
@@ -199,25 +230,64 @@ export async function acceptInvite(
     })
     .returning();
 
-  // Update invite status
-  await db
-    .update(workspaceInvite)
-    .set({
-      status: "accepted",
-      acceptedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(workspaceInvite.id, invite.id));
+  // Get user details for logging
+  const userData = await db
+    .select({ name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  // Log member added (only if new membership was created)
+  if (userData) {
+    await logMemberAdded(
+      invite.workspaceId,
+      userId,
+      membership[0].id,
+      userData.email,
+      userData.name,
+      invite.role,
+    );
+  }
 
   return { invite, membership: membership[0] };
 }
 
-export async function cancelInvite(inviteId: string) {
+export async function cancelInvite(inviteId: string, actorId: string) {
+  // Get invite before update to extract metadata
+  const invite = await db
+    .select()
+    .from(workspaceInvite)
+    .where(eq(workspaceInvite.id, inviteId))
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (!invite) {
+    throw new Error("Invite not found");
+  }
+
+  const workspaceRecord = await db
+    .select({ ownerId: workspace.ownerId })
+    .from(workspace)
+    .where(eq(workspace.id, invite.workspaceId))
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (!workspaceRecord) {
+    throw new Error("Workspace not found");
+  }
+
+  if (workspaceRecord.ownerId !== actorId) {
+    throw new Error("Only workspace owners can cancel invites");
+  }
+
   const result = await db
     .update(workspaceInvite)
     .set({ status: "cancelled", updatedAt: new Date() })
     .where(eq(workspaceInvite.id, inviteId))
     .returning();
+
+  await logInviteCancelled(invite.workspaceId, actorId, inviteId, invite.email);
 
   return result[0];
 }

@@ -5,7 +5,6 @@ import {
 } from "$lib/server/db/invite";
 import { getWorkspaceById } from "$lib/server/db/workspace";
 import { getWorkspaceMembers } from "$lib/server/db/membership";
-import { logInviteAccepted, logMemberAdded } from "$lib/server/db/activity";
 import type { Actions, PageServerLoad } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
 
@@ -125,23 +124,6 @@ export const actions: Actions = {
         locals.user.email,
       );
 
-      // Log activity
-      await logInviteAccepted(
-        result.invite.workspaceId,
-        locals.user.id,
-        result.invite.id,
-        result.invite.email,
-      );
-
-      await logMemberAdded(
-        result.invite.workspaceId,
-        locals.user.id, // The actor is the user accepting the invite
-        result.membership.id,
-        locals.user.email,
-        locals.user.name,
-        result.invite.role,
-      );
-
       // Get workspace for redirect
       const workspace = await getWorkspaceById(result.invite.workspaceId);
 
@@ -203,7 +185,7 @@ export const actions: Actions = {
       }
 
       // Cancel the invite (marking it as declined)
-      await cancelInvite(invite.id);
+      await cancelInvite(invite.id, locals.user.id);
 
       return { success: true, declined: true };
     } catch (err) {

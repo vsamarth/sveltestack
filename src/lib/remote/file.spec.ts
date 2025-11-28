@@ -379,7 +379,7 @@ describe("file integration tests", () => {
 
       // Delete the file
       const { deleteFile: deleteFileDb } = await import("$lib/server/db/file");
-      await deleteFileDb(file.id);
+      await deleteFileDb(file.id, testUser1.id);
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
 
@@ -499,7 +499,7 @@ describe("file integration tests", () => {
 
       // Delete the file
       const { deleteFile: deleteFileDb } = await import("$lib/server/db/file");
-      await deleteFileDb(file.id);
+      await deleteFileDb(file.id, testUser1.id);
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
 

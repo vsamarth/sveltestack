@@ -1,6 +1,7 @@
 import { db } from ".";
 import { and, eq } from "drizzle-orm";
 import { userPreferences, workspace } from "./schema";
+import { logWorkspaceCreated, logWorkspaceRenamed } from "./activity";
 
 export async function createDefaultWorkspace(userId: string) {
   const newWorkspace = await createWorkspace("Personal", userId);
@@ -46,17 +47,37 @@ export async function createWorkspace(name: string, userId: string) {
     })
     .returning();
 
-  return result[0];
+  const newWorkspace = result[0];
+  await logWorkspaceCreated(newWorkspace.id, userId);
+
+  return newWorkspace;
 }
 
-export async function updateWorkspace(workspaceId: string, name: string) {
+export async function updateWorkspace(
+  workspaceId: string,
+  name: string,
+  userId: string,
+) {
+  const oldWorkspace = await getWorkspaceById(workspaceId);
+  if (!oldWorkspace) {
+    throw new Error("Workspace not found");
+  }
+
   const result = await db
     .update(workspace)
     .set({ name })
     .where(eq(workspace.id, workspaceId))
     .returning();
 
-  return result[0];
+  const updated = result[0];
+  await logWorkspaceRenamed(
+    workspaceId,
+    userId,
+    oldWorkspace.name,
+    updated.name,
+  );
+
+  return updated;
 }
 
 export async function deleteWorkspace(workspaceId: string) {

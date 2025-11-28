@@ -6,6 +6,9 @@ import {
   cancelInvite as cancelInviteDb,
   getPendingInvites as getPendingInvitesDb,
 } from "$lib/server/db/invite";
+import { workspaceInvite } from "$lib/server/db/schema";
+import { db } from "$lib/server/db";
+import { eq } from "drizzle-orm";
 import {
   getWorkspaceMembersWithDetails,
   removeMember as removeMemberDb,
@@ -14,11 +17,6 @@ import {
 import { getWorkspaceById, userOwnsWorkspace } from "$lib/server/db/workspace";
 import { sendWorkspaceInviteEmail } from "$lib/server/email";
 import { env } from "$lib/server/env";
-import {
-  logInviteSent,
-  logInviteCancelled,
-  logMemberRemoved,
-} from "$lib/server/db/activity";
 
 export const sendInvite = command(
   z.object({
@@ -76,15 +74,6 @@ export const sendInvite = command(
         inviterName: locals.user.name,
       });
 
-      // Log activity
-      await logInviteSent(
-        workspaceId,
-        locals.user.id,
-        invite.id,
-        invite.email,
-        invite.role,
-      );
-
       return {
         success: true,
         inviteId: invite.id,
@@ -106,27 +95,25 @@ export const cancelInvite = command(z.string(), async (inviteId) => {
   }
 
   try {
-    const cancelled = await cancelInviteDb(inviteId);
-    if (!cancelled) {
+    // Get invite first to check workspace ownership
+    const invite = await db
+      .select()
+      .from(workspaceInvite)
+      .where(eq(workspaceInvite.id, inviteId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!invite) {
       error(404, "Invite not found");
     }
 
     // Verify user owns the workspace
-    const isOwner = await userOwnsWorkspace(
-      cancelled.workspaceId,
-      locals.user.id,
-    );
+    const isOwner = await userOwnsWorkspace(invite.workspaceId, locals.user.id);
     if (!isOwner) {
       error(403, "Only workspace owners can cancel invites");
     }
 
-    // Log activity
-    await logInviteCancelled(
-      cancelled.workspaceId,
-      locals.user.id,
-      inviteId,
-      cancelled.email,
-    );
+    await cancelInviteDb(inviteId, locals.user.id);
 
     return { success: true };
   } catch (err) {
@@ -204,21 +191,7 @@ export const removeMember = command(
     }
 
     try {
-      // Get member details before removing to log email and name
-      const members = await getWorkspaceMembersWithDetails(workspaceId);
-      const memberToRemove = members.find((m) => m.userId === userId);
-
-      await removeMemberDb(workspaceId, userId);
-
-      if (memberToRemove) {
-        await logMemberRemoved(
-          workspaceId,
-          locals.user.id,
-          userId,
-          memberToRemove.email,
-          memberToRemove.name,
-        );
-      }
+      await removeMemberDb(workspaceId, userId, locals.user.id);
 
       return { success: true };
     } catch (err) {

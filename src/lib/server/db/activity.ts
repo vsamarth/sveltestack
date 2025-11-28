@@ -1,15 +1,7 @@
 import { db } from ".";
-import { and, eq, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { workspaceActivity, user } from "./schema";
 import type { WorkspaceActivityEventType } from "./schema/activity";
-
-export interface ActivityFilters {
-  eventType?: WorkspaceActivityEventType;
-  entityType?: "workspace" | "file" | "member" | "invite";
-  entityId?: string;
-  limit?: number;
-  offset?: number;
-}
 
 export async function createActivity(
   workspaceId: string,
@@ -36,22 +28,8 @@ export async function createActivity(
 
 export async function getWorkspaceActivities(
   workspaceId: string,
-  filters?: ActivityFilters,
+  options?: { limit?: number; offset?: number },
 ) {
-  const conditions = [eq(workspaceActivity.workspaceId, workspaceId)];
-
-  if (filters?.eventType) {
-    conditions.push(eq(workspaceActivity.eventType, filters.eventType));
-  }
-
-  if (filters?.entityType) {
-    conditions.push(eq(workspaceActivity.entityType, filters.entityType));
-  }
-
-  if (filters?.entityId) {
-    conditions.push(eq(workspaceActivity.entityId, filters.entityId));
-  }
-
   const baseQuery = db
     .select({
       id: workspaceActivity.id,
@@ -68,19 +46,19 @@ export async function getWorkspaceActivities(
     })
     .from(workspaceActivity)
     .innerJoin(user, eq(workspaceActivity.actorId, user.id))
-    .where(and(...conditions))
+    .where(eq(workspaceActivity.workspaceId, workspaceId))
     .orderBy(desc(workspaceActivity.createdAt));
 
-  if (filters?.limit && filters?.offset !== undefined) {
-    return await baseQuery.limit(filters.limit).offset(filters.offset);
+  if (options?.limit !== undefined && options?.offset !== undefined) {
+    return await baseQuery.limit(options.limit).offset(options.offset);
   }
 
-  if (filters?.limit) {
-    return await baseQuery.limit(filters.limit);
+  if (options?.limit !== undefined) {
+    return await baseQuery.limit(options.limit);
   }
 
-  if (filters?.offset) {
-    return await baseQuery.offset(filters.offset);
+  if (options?.offset !== undefined) {
+    return await baseQuery.offset(options.offset);
   }
 
   return await baseQuery;
@@ -305,4 +283,3 @@ export async function logInviteCancelled(
     inviteId,
   );
 }
-
