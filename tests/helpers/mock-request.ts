@@ -29,20 +29,20 @@ export function mockGetRequestEventWithUser(user: User | null) {
 /**
  * Creates a mock implementation of getRequestEvent that returns a mock event with the given user.
  * This should be used with vi.mock at the top level of test files.
- * 
+ *
  * @param user - The user to mock in the request event, or null for unauthenticated requests
  * @returns A mock function that returns the mock request event
- * 
+ *
  * @example
  * ```ts
  * import { createGetRequestEventMock } from '../../../tests/helpers/mock-request';
- * 
+ *
  * const mockGetRequestEvent = vi.fn();
  * vi.mock('$app/server', () => ({
  *   getRequestEvent: () => mockGetRequestEvent(),
  *   command: (schema, handler) => handler,
  * }));
- * 
+ *
  * beforeEach(() => {
  *   mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser));
  * });

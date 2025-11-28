@@ -4,6 +4,7 @@ import { seed, reset } from "drizzle-seed";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { ulid } from "ulid";
+import { randomBytes, createHash } from "node:crypto";
 
 import * as schema from "./schema";
 import { hash } from "../auth/hash";
@@ -113,7 +114,8 @@ async function seedDatabase() {
   console.log("🌱 Seeding database...");
 
   // Create test users first
-  await createTestUsers();
+  const testUsers = await createTestUsers();
+  await seedWorkspaceFixtures(testUsers);
 
   // Create additional random users
   const userIds = Array.from({ length: 10 }, () => ulid());
@@ -172,6 +174,184 @@ async function seedDatabase() {
   }));
 
   console.log("✅ Database seeded successfully!");
+}
+
+type FileSeed = {
+  filename: string;
+  contentType: string;
+  size: number;
+};
+
+function createHashedToken() {
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  return { token, tokenHash };
+}
+
+async function addFilesToWorkspace(
+  workspaceId: string,
+  files: FileSeed[],
+) {
+  if (files.length === 0) return;
+
+  await db.insert(schema.file).values(
+    files.map((fileSeed) => ({
+      id: ulid(),
+      workspaceId,
+      filename: fileSeed.filename,
+      storageKey: `${ulid()}.${fileSeed.filename.split(".").pop()}`,
+      size: fileSeed.size.toString(),
+      contentType: fileSeed.contentType,
+      status: "completed" as const,
+    }))
+  );
+
+}
+
+async function seedWorkspaceFixtures(users: CreatedUser[]) {
+  const verifiedUser = users.find(
+    (user) => user.email === TEST_USERS.verified.email,
+  );
+  const memberUser = users.find(
+    (user) => user.email === TEST_USERS.member.email,
+  );
+  const invitedUser = users.find(
+    (user) => user.email === TEST_USERS.invited.email,
+  );
+
+  if (!verifiedUser || !memberUser || !invitedUser) {
+    console.warn("⚠️ Missing expected test users. Skipping workspace fixtures.");
+    return;
+  }
+
+  console.log("📁 Creating workspace fixtures...");
+
+  const defaultWorkspaceId = verifiedUser.workspaceId;
+
+  const [personalWorkspace] = await db
+    .insert(schema.workspace)
+    .values({
+      id: ulid(),
+      name: "Personal Projects",
+      ownerId: verifiedUser.id,
+    })
+    .returning();
+  const personalWorkspaceId = personalWorkspace.id;
+
+  const [teamWorkspace] = await db
+    .insert(schema.workspace)
+    .values({
+      id: ulid(),
+      name: "Team Workspace",
+      ownerId: verifiedUser.id,
+    })
+    .returning();
+  const teamWorkspaceId = teamWorkspace.id;
+
+  const [emptyWorkspace] = await db
+    .insert(schema.workspace)
+    .values({
+      id: ulid(),
+      name: "Empty Workspace",
+      ownerId: verifiedUser.id,
+    })
+    .returning();
+  const emptyWorkspaceId = emptyWorkspace.id;
+
+  await addFilesToWorkspace(defaultWorkspaceId, [
+    {
+      filename: "project-plan.pdf",
+      contentType: "application/pdf",
+      size: 256000,
+    },
+    {
+      filename: "design-assets.png",
+      contentType: "image/png",
+      size: 183000,
+    },
+    {
+      filename: "meeting-notes.txt",
+      contentType: "text/plain",
+      size: 4096,
+    },
+  ]);
+
+  await addFilesToWorkspace(personalWorkspaceId, [
+    {
+      filename: "budget.xlsx",
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      size: 102400,
+    },
+    {
+      filename: "roadmap.md",
+      contentType: "text/markdown",
+      size: 5120,
+    },
+  ]);
+
+  await addFilesToWorkspace(teamWorkspaceId, [
+    {
+      filename: "team-photo.jpg",
+      contentType: "image/jpeg",
+      size: 204800,
+    },
+    {
+      filename: "requirements.docx",
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      size: 307200,
+    },
+    {
+      filename: "research.pdf",
+      contentType: "application/pdf",
+      size: 512000,
+    },
+  ]);
+
+  // Share default and team workspaces with member user
+  await db.insert(schema.workspaceMember).values([
+    {
+      id: ulid(),
+      workspaceId: defaultWorkspaceId,
+      userId: memberUser.id,
+    },
+    {
+      id: ulid(),
+      workspaceId: teamWorkspaceId,
+      userId: memberUser.id,
+    },
+  ]);
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  const pendingInvite = createHashedToken();
+  await db.insert(schema.workspaceInvite).values({
+    id: ulid(),
+    workspaceId: defaultWorkspaceId,
+    email: invitedUser.email,
+    invitedBy: verifiedUser.id,
+    role: "member",
+    token: pendingInvite.tokenHash,
+    expiresAt,
+    status: "pending",
+  });
+
+  const acceptedInvite = createHashedToken();
+  await db.insert(schema.workspaceInvite).values({
+    id: ulid(),
+    workspaceId: teamWorkspaceId,
+    email: "accepted-member@example.com",
+    invitedBy: verifiedUser.id,
+    role: "member",
+    token: acceptedInvite.tokenHash,
+    status: "accepted",
+    acceptedAt: new Date(),
+  });
+
+  console.log("✅ Workspace fixtures created:");
+  console.log(`   - Default workspace (${defaultWorkspaceId}) seeded`);
+  console.log(`   - Personal Projects workspace (${personalWorkspaceId}) seeded`);
+  console.log(`   - Team Workspace (${teamWorkspaceId}) seeded`);
+  console.log(`   - Empty Workspace (${emptyWorkspaceId}) ready for tests`);
 }
 
 async function resetDatabase() {

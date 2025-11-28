@@ -4,4 +4,3 @@
 
 // Note: The actual error suppression happens in vite.config.ts via the plugin
 // This file is here for any additional test setup if needed
-

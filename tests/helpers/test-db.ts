@@ -108,7 +108,9 @@ export async function createTestFile(options: {
   id?: string;
 }) {
   const fileId = options.id || ulid();
-  const storageKey = options.storageKey || `${ulid()}.${options.filename.split(".").pop() || "txt"}`;
+  const storageKey =
+    options.storageKey ||
+    `${ulid()}.${options.filename.split(".").pop() || "txt"}`;
   const [createdFile] = await db
     .insert(file)
     .values({

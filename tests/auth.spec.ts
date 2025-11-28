@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { TEST_USERS } from "./fixtures/test-users";
 
+// Reset storage state for this file to avoid being authenticated
+test.use({ storageState: { cookies: [], origins: [] } });
+
 // Use the verified test user for most tests
 const TEST_USER = TEST_USERS.verified;
 
@@ -14,12 +17,8 @@ test.describe("Authentication", () => {
       // Fill in sign in form with seeded test user
       await page.getByLabel("Email").fill(TEST_USER.email);
       await page.getByLabel("Password").fill(TEST_USER.password);
-
-      // Submit and wait for navigation
-      await Promise.all([
-        page.waitForURL(/\/dashboard/, { timeout: 15000 }),
-        page.getByRole("button", { name: "Sign in" }).click(),
-      ]);
+await  page.getByRole("button", { name: "Sign in" }).click()
+await  page.waitForURL(/\/dashboard/)
 
       // Verify we're on the dashboard
       await expect(page).toHaveURL(/\/dashboard/);

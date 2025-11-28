@@ -4,7 +4,9 @@ import { vi } from "vitest";
  * Mocks for S3 operations
  */
 export function mockS3Operations() {
-  const mockGetSignedUrl = vi.fn().mockResolvedValue("https://mock-presigned-url.com/file");
+  const mockGetSignedUrl = vi
+    .fn()
+    .mockResolvedValue("https://mock-presigned-url.com/file");
   const mockS3Client = {
     send: vi.fn().mockResolvedValue({}),
   };
@@ -15,10 +17,22 @@ export function mockS3Operations() {
 
   vi.mock("@aws-sdk/client-s3", () => ({
     S3Client: vi.fn(() => mockS3Client),
-    PutObjectCommand: vi.fn((params) => ({ ...params, type: "PutObjectCommand" })),
-    GetObjectCommand: vi.fn((params) => ({ ...params, type: "GetObjectCommand" })),
-    HeadBucketCommand: vi.fn((params) => ({ ...params, type: "HeadBucketCommand" })),
-    CreateBucketCommand: vi.fn((params) => ({ ...params, type: "CreateBucketCommand" })),
+    PutObjectCommand: vi.fn((params) => ({
+      ...params,
+      type: "PutObjectCommand",
+    })),
+    GetObjectCommand: vi.fn((params) => ({
+      ...params,
+      type: "GetObjectCommand",
+    })),
+    HeadBucketCommand: vi.fn((params) => ({
+      ...params,
+      type: "HeadBucketCommand",
+    })),
+    CreateBucketCommand: vi.fn((params) => ({
+      ...params,
+      type: "CreateBucketCommand",
+    })),
   }));
 
   return {
@@ -63,4 +77,3 @@ export function setupAllMocks() {
     ...emailMocks,
   };
 }
-
