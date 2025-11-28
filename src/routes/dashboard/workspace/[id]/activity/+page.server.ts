@@ -4,9 +4,7 @@ import { getWorkspaceActivities } from "$lib/server/db/activity";
 import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 
-const ACTIVITIES_PER_PAGE = 20;
-
-export const load: PageServerLoad = async ({ locals, params, url }) => {
+export const load: PageServerLoad = async ({ locals, params }) => {
   if (!locals.user) {
     throw error(401, "Unauthorized");
   }
@@ -23,30 +21,13 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     throw error(403, "Forbidden");
   }
 
-  // Get page from query params
-  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
-  const offset = (page - 1) * ACTIVITIES_PER_PAGE;
-
-  const activities = await getWorkspaceActivities(params.id, {
-    limit: ACTIVITIES_PER_PAGE + 1, // Fetch one extra to check if there's more
-    offset,
-  });
-
-  // Check if there are more activities
-  const hasMore = activities.length > ACTIVITIES_PER_PAGE;
-  const displayActivities = hasMore
-    ? activities.slice(0, ACTIVITIES_PER_PAGE)
-    : activities;
+  // Get all activities without pagination
+  const activities = await getWorkspaceActivities(params.id);
 
   return {
     workspace,
-    activities: displayActivities,
+    activities,
     isOwner: workspace.ownerId === locals.user.id,
     currentUserId: locals.user.id,
-    pagination: {
-      page,
-      hasMore,
-      hasPrevious: page > 1,
-    },
   };
 };

@@ -26,11 +26,8 @@ export async function createActivity(
   return result[0];
 }
 
-export async function getWorkspaceActivities(
-  workspaceId: string,
-  options?: { limit?: number; offset?: number },
-) {
-  const baseQuery = db
+export async function getWorkspaceActivities(workspaceId: string) {
+  return await db
     .select({
       id: workspaceActivity.id,
       workspaceId: workspaceActivity.workspaceId,
@@ -48,20 +45,6 @@ export async function getWorkspaceActivities(
     .innerJoin(user, eq(workspaceActivity.actorId, user.id))
     .where(eq(workspaceActivity.workspaceId, workspaceId))
     .orderBy(desc(workspaceActivity.createdAt));
-
-  if (options?.limit !== undefined && options?.offset !== undefined) {
-    return await baseQuery.limit(options.limit).offset(options.offset);
-  }
-
-  if (options?.limit !== undefined) {
-    return await baseQuery.limit(options.limit);
-  }
-
-  if (options?.offset !== undefined) {
-    return await baseQuery.offset(options.offset);
-  }
-
-  return await baseQuery;
 }
 
 export async function getActivityById(activityId: string) {

@@ -1,23 +1,10 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { siteConfig } from "$lib/config";
-  import { goto } from "$app/navigation";
-  import { page } from "$app/state";
   import ActivityFeed from "$lib/components/activity-feed.svelte";
-  import { Button } from "$lib/components/ui/button";
-  import {
-    ChevronLeftIcon,
-    ChevronRightIcon,
-    ActivityIcon,
-  } from "@lucide/svelte";
+  import { ActivityIcon } from "@lucide/svelte";
 
   let { data }: { data: PageData } = $props();
-
-  function goToPage(pageNum: number) {
-    const url = new URL(page.url);
-    url.searchParams.set("page", pageNum.toString());
-    goto(url.toString());
-  }
 </script>
 
 <svelte:head>
@@ -63,33 +50,6 @@
           activities={data.activities}
           currentUserId={data.user.id}
         />
-
-        <!-- Pagination -->
-        {#if data.totalPages > 1}
-          <div class="flex items-center justify-end gap-2 py-4 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={data.currentPage <= 1}
-              onclick={() => goToPage(data.currentPage - 1)}
-            >
-              <ChevronLeftIcon class="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-            <div class="text-sm text-muted-foreground mx-2">
-              Page {data.currentPage} of {data.totalPages}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={data.currentPage >= data.totalPages}
-              onclick={() => goToPage(data.currentPage + 1)}
-            >
-              Next
-              <ChevronRightIcon class="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        {/if}
       </div>
     {/if}
   </div>
