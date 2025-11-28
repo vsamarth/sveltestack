@@ -34,10 +34,11 @@ const browserProjects = isCI
 
 export default defineConfig({
   testDir: "tests",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  workers: isCI ? 1 : undefined,
+  // to avoid race conditions with the database
+  workers: 1,
   reporter: isCI ? "github" : "html",
 
   use: {
