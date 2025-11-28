@@ -17,8 +17,8 @@ test.describe("Authentication", () => {
       // Fill in sign in form with seeded test user
       await page.getByLabel("Email").fill(TEST_USER.email);
       await page.getByLabel("Password").fill(TEST_USER.password);
-await  page.getByRole("button", { name: "Sign in" }).click()
-await  page.waitForURL(/\/dashboard/)
+      await page.getByRole("button", { name: "Sign in" }).click();
+      await page.waitForURL(/\/dashboard/);
 
       // Verify we're on the dashboard
       await expect(page).toHaveURL(/\/dashboard/);

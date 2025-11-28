@@ -11,10 +11,7 @@
   import { FolderPlusIcon, PencilIcon } from "@lucide/svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
-  import {
-    createWorkspace,
-    updateWorkspace,
-  } from "$lib/remote/actions.remote";
+  import { createWorkspace, updateWorkspace } from "$lib/remote/actions.remote";
 
   interface Props {
     open?: boolean;

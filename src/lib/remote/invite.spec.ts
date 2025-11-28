@@ -35,8 +35,14 @@ describe("invite integration tests", () => {
 
   beforeEach(async () => {
     const uniqueId = Date.now().toString(36);
-    testUser1 = await createTestUser({ name: "Workspace Owner", email: `owner-${uniqueId}@example.com` });
-    testUser2 = await createTestUser({ name: "Other User", email: `other-${uniqueId}@example.com` });
+    testUser1 = await createTestUser({
+      name: "Workspace Owner",
+      email: `owner-${uniqueId}@example.com`,
+    });
+    testUser2 = await createTestUser({
+      name: "Other User",
+      email: `other-${uniqueId}@example.com`,
+    });
     userIds = [testUser1.id, testUser2.id];
   });
 
@@ -46,9 +52,13 @@ describe("invite integration tests", () => {
   });
 
   // Helper functions
-  const createWorkspace = () => createTestWorkspace({ name: "Test Workspace", ownerId: testUser1.id });
-  
-  const expectError = async (fn: () => Promise<unknown>, expectedStatus: number) => {
+  const createWorkspace = () =>
+    createTestWorkspace({ name: "Test Workspace", ownerId: testUser1.id });
+
+  const expectError = async (
+    fn: () => Promise<unknown>,
+    expectedStatus: number,
+  ) => {
     try {
       await fn();
       expect.fail("Should have thrown error");
@@ -114,7 +124,11 @@ describe("invite integration tests", () => {
       });
 
       await expectError(
-        () => sendInvite({ workspaceId: workspace.id, email: "existing@example.com" }),
+        () =>
+          sendInvite({
+            workspaceId: workspace.id,
+            email: "existing@example.com",
+          }),
         400,
       );
     });
@@ -124,7 +138,11 @@ describe("invite integration tests", () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser2));
 
       await expectError(
-        () => sendInvite({ workspaceId: workspace.id, email: "newmember@example.com" }),
+        () =>
+          sendInvite({
+            workspaceId: workspace.id,
+            email: "newmember@example.com",
+          }),
         403,
       );
     });
@@ -133,7 +151,11 @@ describe("invite integration tests", () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
 
       await expectError(
-        () => sendInvite({ workspaceId: "non-existent-id", email: "newmember@example.com" }),
+        () =>
+          sendInvite({
+            workspaceId: "non-existent-id",
+            email: "newmember@example.com",
+          }),
         404,
       );
     });
@@ -180,10 +202,30 @@ describe("invite integration tests", () => {
   describe("getWorkspaceInvites", () => {
     it("should return only pending invites when user is owner", async () => {
       const workspace = await createWorkspace();
-      await createTestInvite({ workspaceId: workspace.id, email: "pending1@example.com", invitedBy: testUser1.id, status: "pending" });
-      await createTestInvite({ workspaceId: workspace.id, email: "pending2@example.com", invitedBy: testUser1.id, status: "pending" });
-      await createTestInvite({ workspaceId: workspace.id, email: "cancelled@example.com", invitedBy: testUser1.id, status: "cancelled" });
-      await createTestInvite({ workspaceId: workspace.id, email: "expired@example.com", invitedBy: testUser1.id, status: "expired" });
+      await createTestInvite({
+        workspaceId: workspace.id,
+        email: "pending1@example.com",
+        invitedBy: testUser1.id,
+        status: "pending",
+      });
+      await createTestInvite({
+        workspaceId: workspace.id,
+        email: "pending2@example.com",
+        invitedBy: testUser1.id,
+        status: "pending",
+      });
+      await createTestInvite({
+        workspaceId: workspace.id,
+        email: "cancelled@example.com",
+        invitedBy: testUser1.id,
+        status: "cancelled",
+      });
+      await createTestInvite({
+        workspaceId: workspace.id,
+        email: "expired@example.com",
+        invitedBy: testUser1.id,
+        status: "expired",
+      });
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
       const invites = await getWorkspaceInvites(workspace.id);
@@ -202,7 +244,10 @@ describe("invite integration tests", () => {
   describe("getMembers", () => {
     it("should return members when user has access (owner or member)", async () => {
       const workspace = await createWorkspace();
-      await createTestMember({ workspaceId: workspace.id, userId: testUser2.id });
+      await createTestMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
       const membersAsOwner = await getMembers(workspace.id);
@@ -226,10 +271,16 @@ describe("invite integration tests", () => {
   describe("removeMember", () => {
     it("should remove member when user is owner", async () => {
       const workspace = await createWorkspace();
-      await createTestMember({ workspaceId: workspace.id, userId: testUser2.id });
+      await createTestMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
-      const result = await removeMember({ workspaceId: workspace.id, userId: testUser2.id });
+      const result = await removeMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
 
       expect(result.success).toBe(true);
       const members = await getWorkspaceMembersWithDetails(workspace.id);
@@ -238,7 +289,10 @@ describe("invite integration tests", () => {
 
     it("should return 403 when user is not owner", async () => {
       const workspace = await createWorkspace();
-      await createTestMember({ workspaceId: workspace.id, userId: testUser2.id });
+      await createTestMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser2));
       await expectError(
@@ -258,4 +312,3 @@ describe("invite integration tests", () => {
     });
   });
 });
-

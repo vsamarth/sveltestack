@@ -5,7 +5,12 @@ import {
   deleteWorkspace,
   setLastActiveWorkspace,
 } from "./workspace";
-import { createTestUser, createTestWorkspace, createTestMember, cleanupTestData } from "../../../tests/helpers/test-db";
+import {
+  createTestUser,
+  createTestWorkspace,
+  createTestMember,
+  cleanupTestData,
+} from "../../../tests/helpers/test-db";
 import { createMockRequestEvent } from "../../../tests/helpers/mock-request";
 import { getWorkspaces, getWorkspaceById } from "$lib/server/db/workspace";
 
@@ -33,9 +38,13 @@ describe("workspace integration tests", () => {
   });
 
   // Helper functions
-  const createTestWorkspaceHelper = (name = "Test Workspace") => createTestWorkspace({ name, ownerId: testUser1.id });
-  
-  const expectError = async (fn: () => Promise<unknown>, expectedStatus: number | number[]) => {
+  const createTestWorkspaceHelper = (name = "Test Workspace") =>
+    createTestWorkspace({ name, ownerId: testUser1.id });
+
+  const expectError = async (
+    fn: () => Promise<unknown>,
+    expectedStatus: number | number[],
+  ) => {
     try {
       await fn();
       expect.fail("Should have thrown error");
@@ -88,7 +97,8 @@ describe("workspace integration tests", () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser2));
 
       await expectError(
-        () => updateWorkspace({ workspaceId: workspace.id, name: "Updated Name" }),
+        () =>
+          updateWorkspace({ workspaceId: workspace.id, name: "Updated Name" }),
         403,
       );
 
@@ -99,7 +109,11 @@ describe("workspace integration tests", () => {
     it("should return 404 when workspace doesn't exist", async () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
       await expectError(
-        () => updateWorkspace({ workspaceId: "non-existent-id", name: "Updated Name" }),
+        () =>
+          updateWorkspace({
+            workspaceId: "non-existent-id",
+            name: "Updated Name",
+          }),
         404,
       );
     });
@@ -142,12 +156,19 @@ describe("workspace integration tests", () => {
 
       // Test as owner
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
-      expect(await setLastActiveWorkspace(workspace.id)).toEqual({ success: true });
+      expect(await setLastActiveWorkspace(workspace.id)).toEqual({
+        success: true,
+      });
 
       // Test as member
-      await createTestMember({ workspaceId: workspace.id, userId: testUser2.id });
+      await createTestMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser2));
-      expect(await setLastActiveWorkspace(workspace.id)).toEqual({ success: true });
+      expect(await setLastActiveWorkspace(workspace.id)).toEqual({
+        success: true,
+      });
     });
 
     it("should return 403 when user doesn't have access", async () => {
@@ -162,4 +183,3 @@ describe("workspace integration tests", () => {
     });
   });
 });
-

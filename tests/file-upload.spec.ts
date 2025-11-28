@@ -113,7 +113,9 @@ test.describe("File upload", () => {
     });
 
     // Verify error message appears
-    await expect(page.getByText("Upload restriction")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Upload restriction")).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("prevents uploading more than five files at once", async ({ page }) => {
@@ -125,7 +127,9 @@ test.describe("File upload", () => {
     await fileInput.setInputFiles(files);
 
     // Verify error message appears
-    await expect(page.getByText("Upload restriction")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Upload restriction")).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test.afterAll(async () => {
@@ -201,4 +205,3 @@ test.describe("File upload", () => {
     }
   });
 });
-

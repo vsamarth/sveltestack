@@ -16,4 +16,3 @@ export const AUTH_USERS = {
   verified: TEST_USERS.verified,
   member: TEST_USERS.member,
 };
-

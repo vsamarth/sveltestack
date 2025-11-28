@@ -48,4 +48,3 @@ for (const user of USERS_TO_AUTHENTICATE) {
     await page.context().storageState({ path: user.storageFile });
   });
 }
-

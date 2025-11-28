@@ -2,7 +2,11 @@ import { db } from "$lib/server/db";
 import { workspace, file, user } from "$lib/server/db/schema";
 import { eq, and } from "drizzle-orm";
 import { ulid } from "ulid";
-import { deleteFileFromStorage, uploadFile, initBucket } from "$lib/server/storage";
+import {
+  deleteFileFromStorage,
+  uploadFile,
+  initBucket,
+} from "$lib/server/storage";
 import { TEST_USERS } from "../fixtures/test-users";
 
 type FileSeed = {
@@ -93,10 +97,7 @@ function generateFileContent(
   return Buffer.alloc(safeSize);
 }
 
-async function addFilesToWorkspace(
-  workspaceId: string,
-  files: FileSeed[],
-) {
+async function addFilesToWorkspace(workspaceId: string, files: FileSeed[]) {
   if (files.length === 0) return;
 
   const fileRecords = [];
@@ -209,4 +210,3 @@ export async function resetWorkspaceFiles(workspaceName: string) {
   }
   // Add other workspace file sets as needed
 }
-

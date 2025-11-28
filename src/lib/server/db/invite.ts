@@ -133,7 +133,11 @@ export async function getPendingInvites(workspaceId: string) {
     .orderBy(workspaceInvite.createdAt);
 }
 
-export async function acceptInvite(token: string, userId: string, userEmail: string) {
+export async function acceptInvite(
+  token: string,
+  userId: string,
+  userEmail: string,
+) {
   // Get the invite
   const invite = await getInviteByToken(token);
 

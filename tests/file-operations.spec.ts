@@ -15,7 +15,6 @@ async function gotoFilesPage(page: Page) {
   await page.waitForURL(/\/dashboard\/workspace\/.+\/files/);
 }
 
-
 async function getWorkspaceIdByName(name: string) {
   const record = await db
     .select()
@@ -68,7 +67,10 @@ test.describe("File operations", () => {
       }
     } catch (error) {
       // Ignore errors if file doesn't exist or can't be deleted
-      console.warn(`Failed to delete downloaded file ${downloadedFilePath}:`, error);
+      console.warn(
+        `Failed to delete downloaded file ${downloadedFilePath}:`,
+        error,
+      );
     }
   });
 
@@ -137,7 +139,9 @@ test.describe("File operations", () => {
     const emptyWorkspaceId = await getWorkspaceIdByName("Empty Workspace");
     await page.goto(`/dashboard/workspace/${emptyWorkspaceId}/files`);
 
-    await expect(page.getByRole("heading", { name: "Nothing here yet" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Nothing here yet" }),
+    ).toBeVisible();
   });
 
   test.afterAll(async () => {

@@ -8,7 +8,11 @@ import {
   workspace as workspaceTable,
 } from "$lib/server/db/schema";
 import { and, eq } from "drizzle-orm";
-import { createTestInvite, createTestUser, cleanupTestData } from "./helpers/test-db";
+import {
+  createTestInvite,
+  createTestUser,
+  cleanupTestData,
+} from "./helpers/test-db";
 
 test.use({ storageState: AUTH_STATES.verified });
 
@@ -28,8 +32,12 @@ async function deleteInviteByEmail(email: string) {
 }
 
 test.describe("Invite flow", () => {
-  test("owner sends invite via dialog and sees it in pending list", async ({ page }) => {
-    const workspaceId = await getWorkspaceIdByName(TEST_USERS.verified.workspaceName);
+  test("owner sends invite via dialog and sees it in pending list", async ({
+    page,
+  }) => {
+    const workspaceId = await getWorkspaceIdByName(
+      TEST_USERS.verified.workspaceName,
+    );
     const inviteEmail = `invitee-${Date.now()}@example.com`;
     await page.goto(`/dashboard/workspace/${workspaceId}/settings`);
     await page.getByRole("button", { name: "Invite Member" }).click();
@@ -39,25 +47,32 @@ test.describe("Invite flow", () => {
 
     // Wait for the toast notification
     await expect(page.getByText("Invitation sent")).toBeVisible();
-    
+
     // Wait for the dialog to close
     await expect(dialog).not.toBeVisible();
-    
+
     // Wait for the pending invites section heading to appear (if it wasn't already visible)
     // This ensures the section has rendered
-    const pendingInvitesHeading = page.getByRole("heading", { name: "Pending Invites" });
+    const pendingInvitesHeading = page.getByRole("heading", {
+      name: "Pending Invites",
+    });
     await expect(pendingInvitesHeading).toBeVisible({ timeout: 5000 });
-    
+
     // Find the table row containing the invite email
     // Look for a table row in tbody that contains the email address
     // Use a more specific locator to avoid matching the toast message
-    const inviteRow = page.locator('tbody tr').filter({ hasText: inviteEmail }).first();
+    const inviteRow = page
+      .locator("tbody tr")
+      .filter({ hasText: inviteEmail })
+      .first();
     await expect(inviteRow).toBeVisible({ timeout: 10000 });
-    
+
     // Verify the email appears in the row cell (not just anywhere in the row)
     // The email should be in a table cell, so we can be more specific
-    const emailCell = inviteRow.locator('td').filter({ hasText: inviteEmail });
-    await expect(emailCell.getByText(inviteEmail, { exact: true })).toBeVisible();
+    const emailCell = inviteRow.locator("td").filter({ hasText: inviteEmail });
+    await expect(
+      emailCell.getByText(inviteEmail, { exact: true }),
+    ).toBeVisible();
 
     await deleteInviteByEmail(inviteEmail);
   });
@@ -66,9 +81,14 @@ test.describe("Invite flow", () => {
     page,
     browser,
   }) => {
-    const workspaceId = await getWorkspaceIdByName(TEST_USERS.verified.workspaceName);
+    const workspaceId = await getWorkspaceIdByName(
+      TEST_USERS.verified.workspaceName,
+    );
     const inviteeEmail = `accepted-${Date.now()}@example.com`;
-    const invitee = await createTestUser({ email: inviteeEmail, name: "Invitee User" });
+    const invitee = await createTestUser({
+      email: inviteeEmail,
+      name: "Invitee User",
+    });
 
     const invite = await createTestInvite({
       workspaceId,
@@ -79,11 +99,12 @@ test.describe("Invite flow", () => {
     const context = await browser.newContext();
     const inviteePage = await context.newPage();
 
-    
     await inviteePage.goto("/login");
-    
+
     // Wait for the login form to be ready
-    await expect(inviteePage.getByLabel("Email")).toBeVisible({ timeout: 10000 });
+    await expect(inviteePage.getByLabel("Email")).toBeVisible({
+      timeout: 10000,
+    });
     await inviteePage.getByLabel("Email").fill(inviteeEmail);
     await inviteePage.getByLabel("Password").fill("password123");
     await Promise.all([
@@ -92,25 +113,34 @@ test.describe("Invite flow", () => {
     ]);
 
     await inviteePage.goto(`/invite/${invite.token}`);
-    await inviteePage.getByRole("button", { name: "Accept Invitation" }).click();
+    await inviteePage
+      .getByRole("button", { name: "Accept Invitation" })
+      .click();
     await inviteePage.waitForURL(/\/dashboard\/workspace\/.+\/files/);
 
     // Navigate to settings and wait for the page to load
     await page.goto(`/dashboard/workspace/${workspaceId}/settings`);
-    
+
     // Wait for the members section heading to appear
     await expect(page.getByRole("heading", { name: "Members" })).toBeVisible();
-    
+
     // Find the table row containing the invitee's name
     // Look for a table row in tbody that contains the member's name
-    const memberRow = page.locator('tbody tr').filter({ hasText: invitee.name }).first();
+    const memberRow = page
+      .locator("tbody tr")
+      .filter({ hasText: invitee.name })
+      .first();
     await expect(memberRow).toBeVisible({ timeout: 10000 });
-    
+
     // Verify the member name appears in the row
-    await expect(memberRow.getByText(invitee.name, { exact: true })).toBeVisible();
-    
+    await expect(
+      memberRow.getByText(invitee.name, { exact: true }),
+    ).toBeVisible();
+
     // Verify the member email appears in the row
-    await expect(memberRow.getByText(inviteeEmail, { exact: true })).toBeVisible();
+    await expect(
+      memberRow.getByText(inviteeEmail, { exact: true }),
+    ).toBeVisible();
 
     await context.close();
     await db
@@ -125,4 +155,3 @@ test.describe("Invite flow", () => {
     await cleanupTestData([invitee.id]);
   });
 });
-

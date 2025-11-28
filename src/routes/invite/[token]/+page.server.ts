@@ -112,15 +112,17 @@ export const actions: Actions = {
       }
 
       // Validate email match before accepting
-      if (
-        locals.user.email.toLowerCase() !== invite.email.toLowerCase()
-      ) {
+      if (locals.user.email.toLowerCase() !== invite.email.toLowerCase()) {
         return fail(403, {
           error: "This invitation was sent to a different email address",
         });
       }
 
-      const result = await acceptInvite(token, locals.user.id, locals.user.email);
+      const result = await acceptInvite(
+        token,
+        locals.user.id,
+        locals.user.email,
+      );
 
       // Get workspace for redirect
       const workspace = await getWorkspaceById(result.invite.workspaceId);

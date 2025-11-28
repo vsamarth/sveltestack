@@ -16,10 +16,7 @@ export {
 } from "./invite";
 
 // Re-export all exports from upload.ts
-export {
-  getPresignedUploadUrlRemote,
-  confirmUpload,
-} from "./upload";
+export { getPresignedUploadUrlRemote, confirmUpload } from "./upload";
 
 // Re-export all exports from workspace.ts
 export {
@@ -28,4 +25,3 @@ export {
   deleteWorkspace,
   setLastActiveWorkspace,
 } from "./workspace";
-

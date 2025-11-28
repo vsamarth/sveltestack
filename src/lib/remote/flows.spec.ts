@@ -5,17 +5,8 @@ import {
   deleteWorkspace,
   setLastActiveWorkspace,
 } from "./workspace";
-import {
-  sendInvite,
-  cancelInvite,
-  getWorkspaceInvites,
-  getMembers,
-  removeMember,
-} from "./invite";
-import {
-  getPresignedUploadUrlRemote,
-  confirmUpload,
-} from "./upload";
+import { sendInvite, getMembers, removeMember } from "./invite";
+import { getPresignedUploadUrlRemote, confirmUpload } from "./upload";
 import {
   deleteFile,
   renameFile,
@@ -32,7 +23,10 @@ import {
 } from "../../../tests/helpers/test-db";
 import { createMockRequestEvent } from "../../../tests/helpers/mock-request";
 import { acceptInvite } from "$lib/server/db/invite";
-import { getWorkspaces, getLastActiveWorkspace } from "$lib/server/db/workspace";
+import {
+  getWorkspaces,
+  getLastActiveWorkspace,
+} from "$lib/server/db/workspace";
 import { setupAllMocks } from "../../../tests/helpers/mocks";
 
 // Mock $app/server
@@ -52,8 +46,14 @@ describe("critical flows integration tests", () => {
 
   beforeEach(async () => {
     const uniqueId = Date.now().toString(36);
-    testUser1 = await createTestUser({ name: "Workspace Owner", email: `owner-${uniqueId}@example.com` });
-    testUser2 = await createTestUser({ name: "Member User", email: `member-${uniqueId}@example.com` });
+    testUser1 = await createTestUser({
+      name: "Workspace Owner",
+      email: `owner-${uniqueId}@example.com`,
+    });
+    testUser2 = await createTestUser({
+      name: "Member User",
+      email: `member-${uniqueId}@example.com`,
+    });
     userIds = [testUser1.id, testUser2.id];
     vi.clearAllMocks();
   });
@@ -75,7 +75,10 @@ describe("critical flows integration tests", () => {
     mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser2));
   };
 
-  const expectError = async (fn: () => Promise<unknown>, expectedStatus: number) => {
+  const expectError = async (
+    fn: () => Promise<unknown>,
+    expectedStatus: number,
+  ) => {
     try {
       await fn();
       expect.fail("Should have thrown error");
@@ -84,8 +87,11 @@ describe("critical flows integration tests", () => {
     }
   };
 
-  const createTestFileHelper = (workspaceId: string, filename: string, status: "pending" | "completed" = "completed") =>
-    createTestFile({ workspaceId, filename, status });
+  const createTestFileHelper = (
+    workspaceId: string,
+    filename: string,
+    status: "pending" | "completed" = "completed",
+  ) => createTestFile({ workspaceId, filename, status });
 
   describe("Workspace Creation → Invite → Acceptance Flow", () => {
     it("should complete full flow: create workspace, invite member, accept invite, access files", async () => {
@@ -108,7 +114,11 @@ describe("critical flows integration tests", () => {
         invitedBy: testUser1.id,
         status: "pending",
       });
-      const acceptResult = await acceptInvite(invite.token, testUser2.id, testUser2.email);
+      const acceptResult = await acceptInvite(
+        invite.token,
+        testUser2.id,
+        testUser2.email,
+      );
       expect(acceptResult.membership).toBeDefined();
 
       // Step 4: Member can access workspace files
@@ -141,7 +151,9 @@ describe("critical flows integration tests", () => {
       expect(uploadResult.fileId).toBeDefined();
 
       // Step 2: User confirms upload
-      const confirmResult = await confirmUpload({ fileId: uploadResult.fileId });
+      const confirmResult = await confirmUpload({
+        fileId: uploadResult.fileId,
+      });
       expect(confirmResult.success).toBe(true);
       expect(confirmResult.file?.status).toBe("completed");
 
@@ -213,7 +225,11 @@ describe("critical flows integration tests", () => {
       // Member cannot invite others
       asMember();
       await expectError(
-        () => sendInvite({ workspaceId: workspace.id, email: "newmember@example.com" }),
+        () =>
+          sendInvite({
+            workspaceId: workspace.id,
+            email: "newmember@example.com",
+          }),
         403,
       );
 
@@ -258,4 +274,3 @@ describe("critical flows integration tests", () => {
     });
   });
 });
-

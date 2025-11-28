@@ -49,7 +49,9 @@ test.describe("Workspace navigation and creation", () => {
       ]);
 
       await expect(page.getByText("No Workspaces Yet")).toBeVisible();
-      await page.getByRole("button", { name: "Create Your First Workspace" }).click();
+      await page
+        .getByRole("button", { name: "Create Your First Workspace" })
+        .click();
 
       const dialog = page.getByRole("dialog", { name: "Create Workspace" });
       await dialog.getByLabel("Name").fill("First Workspace");
@@ -57,7 +59,9 @@ test.describe("Workspace navigation and creation", () => {
 
       await page.waitForURL(/\/dashboard\/workspace\/.+\/files/);
       await expect(page.getByText("Files")).toBeVisible();
-      await expect(page.getByRole("button", { name: "First Workspace" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "First Workspace" }),
+      ).toBeVisible();
     });
   });
 
@@ -92,7 +96,9 @@ test.describe("Workspace navigation and creation", () => {
       await dialog.getByRole("button", { name: "Create" }).click();
 
       await page.waitForURL(/\/dashboard\/workspace\/.+\/files/);
-      await expect(page.getByRole("button", { name: "Sidebar Created Workspace" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Sidebar Created Workspace" }),
+      ).toBeVisible();
 
       await expect(dialog).not.toBeVisible();
     });
@@ -105,22 +111,30 @@ test.describe("Workspace navigation and creation", () => {
       const workspaceId = await getWorkspaceIdByName(workspaceName);
       await page.getByRole("button", { name: workspaceName }).first().click();
       await page
-        .locator(
-          `a[href="/dashboard/workspace/${workspaceId}/${subPage}"]`,
-        )
+        .locator(`a[href="/dashboard/workspace/${workspaceId}/${subPage}"]`)
         .click();
       return workspaceId;
     }
 
     test("navigates between workspaces via the sidebar", async ({ page }) => {
-      const workspaceId = await selectWorkspace(page, "Team Workspace", "files");
+      const workspaceId = await selectWorkspace(
+        page,
+        "Team Workspace",
+        "files",
+      );
       await expect(page).toHaveURL(
         new RegExp(`/dashboard/workspace/${workspaceId}/files`),
       );
     });
 
-    test("remembers last active workspace on dashboard redirect", async ({ page }) => {
-      const workspaceId = await selectWorkspace(page, "Team Workspace", "files");
+    test("remembers last active workspace on dashboard redirect", async ({
+      page,
+    }) => {
+      const workspaceId = await selectWorkspace(
+        page,
+        "Team Workspace",
+        "files",
+      );
       await page.goto("/dashboard");
       await page.waitForURL(/\/dashboard\/workspace\/.+\/files/);
 
@@ -128,4 +142,3 @@ test.describe("Workspace navigation and creation", () => {
     });
   });
 });
-

@@ -109,11 +109,7 @@
         Organize and manage files for this workspace.
       </p>
     </div>
-    <input
-      class="hidden"
-      data-testid="add-files-input"
-      {...getInputProps()}
-    />
+    <input class="hidden" data-testid="add-files-input" {...getInputProps()} />
     <Button variant="outline" size="sm" {...getButtonProps()}>
       <Upload class="h-4 w-4 mr-2" />
       Add Files

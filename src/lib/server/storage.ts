@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   HeadBucketCommand,
   CreateBucketCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./env";
@@ -64,4 +65,28 @@ export async function getPresignedDownloadUrl(
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn });
+}
+
+export async function uploadFile(
+  key: string,
+  body: Uint8Array | Buffer,
+  contentType?: string,
+) {
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: env.STORAGE_BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+}
+
+export async function deleteFileFromStorage(key: string) {
+  await s3Client.send(
+    new DeleteObjectCommand({
+      Bucket: env.STORAGE_BUCKET,
+      Key: key,
+    }),
+  );
 }

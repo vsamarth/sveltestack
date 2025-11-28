@@ -1,5 +1,36 @@
 import { z } from "zod";
-import { env as svelteEnv } from "$env/dynamic/private";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+
+/**
+ * Load environment variables with fallback support
+ * Tries SvelteKit's $env/dynamic/private first, then falls back to dotenv + process.env
+ * This works in both SvelteKit contexts (where $env is available) and other contexts
+ */
+function getEnvSource(): Record<string, unknown> {
+  // Load .env file with dotenv first (ensures process.env has .env values)
+  // This is needed for non-SvelteKit contexts where $env is not available
+  try {
+    require("dotenv/config");
+  } catch {
+    // dotenv already loaded or not available, continue
+  }
+
+  // Try to use SvelteKit's $env/dynamic/private if available
+  // In SvelteKit contexts (dev, build, preview), this will work
+  // In other contexts, this will throw and we'll use process.env
+  try {
+    // $env might not be available in all contexts, that's why we have try-catch
+    const svelteEnvModule = require("$env/dynamic/private");
+    return svelteEnvModule.env;
+  } catch {
+    // $env not available, use process.env (which may have been populated by dotenv above)
+    return process.env;
+  }
+}
+
+const svelteEnv = getEnvSource();
 
 /**
  * Environment variable schema

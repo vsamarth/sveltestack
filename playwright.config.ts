@@ -44,10 +44,13 @@ export default defineConfig({
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: !isCI ? 'on' : 'off',
+    video: !isCI ? "on" : "off",
   },
 
-  projects: [{ name: "setup", testMatch: /auth\.setup\.ts/ }, ...browserProjects],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    ...browserProjects,
+  ],
 
   webServer: {
     command: "npm run db:reset-seed && npm run build && npm run preview",

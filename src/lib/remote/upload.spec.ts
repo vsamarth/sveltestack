@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import {
-  getPresignedUploadUrlRemote,
-  confirmUpload,
-} from "./upload";
+import { getPresignedUploadUrlRemote, confirmUpload } from "./upload";
 import {
   createTestUser,
   createTestWorkspace,
@@ -42,9 +39,13 @@ describe("upload integration tests", () => {
   });
 
   // Helper functions
-  const createWorkspace = () => createTestWorkspace({ name: "Test Workspace", ownerId: testUser1.id });
-  
-  const expectError = async (fn: () => Promise<unknown>, expectedStatus: number) => {
+  const createWorkspace = () =>
+    createTestWorkspace({ name: "Test Workspace", ownerId: testUser1.id });
+
+  const expectError = async (
+    fn: () => Promise<unknown>,
+    expectedStatus: number,
+  ) => {
     try {
       await fn();
       expect.fail("Should have thrown error");
@@ -102,12 +103,24 @@ describe("upload integration tests", () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
 
       await expectError(
-        () => getPresignedUploadUrlRemote({ filename: "", contentType: "text/plain", workspaceId: workspace.id, size: 1024 }),
+        () =>
+          getPresignedUploadUrlRemote({
+            filename: "",
+            contentType: "text/plain",
+            workspaceId: workspace.id,
+            size: 1024,
+          }),
         400,
       );
 
       await expectError(
-        () => getPresignedUploadUrlRemote({ filename: "test.txt", contentType: "text/plain", workspaceId: "", size: 1024 }),
+        () =>
+          getPresignedUploadUrlRemote({
+            filename: "test.txt",
+            contentType: "text/plain",
+            workspaceId: "",
+            size: 1024,
+          }),
         400,
       );
     });
@@ -120,7 +133,13 @@ describe("upload integration tests", () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser3));
 
       await expectError(
-        () => getPresignedUploadUrlRemote({ filename: "test.txt", contentType: "text/plain", workspaceId: workspace.id, size: 1024 }),
+        () =>
+          getPresignedUploadUrlRemote({
+            filename: "test.txt",
+            contentType: "text/plain",
+            workspaceId: workspace.id,
+            size: 1024,
+          }),
         403,
       );
     });
@@ -129,7 +148,11 @@ describe("upload integration tests", () => {
   describe("confirmUpload", () => {
     it("should confirm upload and update file status when user has file access", async () => {
       const workspace = await createWorkspace();
-      const file = await createTestFile({ workspaceId: workspace.id, filename: "test.txt", status: "pending" });
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "test.txt",
+        status: "pending",
+      });
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
       const result = await confirmUpload({ fileId: file.id });
@@ -144,8 +167,15 @@ describe("upload integration tests", () => {
 
     it("should work for both owners and members", async () => {
       const workspace = await createWorkspace();
-      await createTestMember({ workspaceId: workspace.id, userId: testUser2.id });
-      const file = await createTestFile({ workspaceId: workspace.id, filename: "test.txt", status: "pending" });
+      await createTestMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "test.txt",
+        status: "pending",
+      });
 
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser2));
       const result = await confirmUpload({ fileId: file.id });
@@ -154,7 +184,11 @@ describe("upload integration tests", () => {
 
     it("should return 403 when user doesn't have access", async () => {
       const workspace = await createWorkspace();
-      const file = await createTestFile({ workspaceId: workspace.id, filename: "test.txt", status: "pending" });
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "test.txt",
+        status: "pending",
+      });
       const testUser3 = await createTestUser({ name: "No Access User" });
       userIds.push(testUser3.id);
 
@@ -164,8 +198,10 @@ describe("upload integration tests", () => {
 
     it("should return 404 when file doesn't exist", async () => {
       mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
-      await expectError(() => confirmUpload({ fileId: "non-existent-id" }), 404);
+      await expectError(
+        () => confirmUpload({ fileId: "non-existent-id" }),
+        404,
+      );
     });
   });
 });
-
