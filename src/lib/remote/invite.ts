@@ -14,6 +14,11 @@ import {
 import { getWorkspaceById, userOwnsWorkspace } from "$lib/server/db/workspace";
 import { sendWorkspaceInviteEmail } from "$lib/server/email";
 import { env } from "$lib/server/env";
+import {
+  logInviteSent,
+  logInviteCancelled,
+  logMemberRemoved,
+} from "$lib/server/db/activity";
 
 export const sendInvite = command(
   z.object({
@@ -71,6 +76,15 @@ export const sendInvite = command(
         inviterName: locals.user.name,
       });
 
+      // Log activity
+      await logInviteSent(
+        workspaceId,
+        locals.user.id,
+        invite.id,
+        invite.email,
+        invite.role,
+      );
+
       return {
         success: true,
         inviteId: invite.id,
@@ -105,6 +119,14 @@ export const cancelInvite = command(z.string(), async (inviteId) => {
     if (!isOwner) {
       error(403, "Only workspace owners can cancel invites");
     }
+
+    // Log activity
+    await logInviteCancelled(
+      cancelled.workspaceId,
+      locals.user.id,
+      inviteId,
+      cancelled.email,
+    );
 
     return { success: true };
   } catch (err) {
@@ -182,7 +204,22 @@ export const removeMember = command(
     }
 
     try {
+      // Get member details before removing to log email and name
+      const members = await getWorkspaceMembersWithDetails(workspaceId);
+      const memberToRemove = members.find((m) => m.userId === userId);
+
       await removeMemberDb(workspaceId, userId);
+
+      if (memberToRemove) {
+        await logMemberRemoved(
+          workspaceId,
+          locals.user.id,
+          userId,
+          memberToRemove.email,
+          memberToRemove.name,
+        );
+      }
+
       return { success: true };
     } catch (err) {
       console.error("Failed to remove member:", err);

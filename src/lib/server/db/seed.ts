@@ -283,7 +283,7 @@ function createHashedToken() {
 }
 
 async function addFilesToWorkspace(workspaceId: string, files: FileSeed[]) {
-  if (files.length === 0) return;
+  if (files.length === 0) return [];
 
   const fileRecords = [];
 
@@ -312,6 +312,194 @@ async function addFilesToWorkspace(workspaceId: string, files: FileSeed[]) {
   }
 
   await db.insert(schema.file).values(fileRecords);
+  return fileRecords;
+}
+
+async function seedActivityEvents(
+  verifiedUser: CreatedUser,
+  memberUser: CreatedUser,
+  defaultWorkspaceId: string,
+  personalWorkspaceId: string,
+  teamWorkspaceId: string,
+  files: Array<{ id: string; filename: string; size: string; contentType: string | null; workspaceId: string }>,
+  members: Array<{ workspaceId: string; userId: string; id: string }>,
+  invites: Array<{ id: string; workspaceId: string; email: string; status: string }>,
+) {
+  console.log("📊 Creating activity events...");
+
+  // Helper to create activity with varied timestamps
+  const createActivityWithTime = async (
+    workspaceId: string,
+    actorId: string,
+    eventType:
+      | "workspace.created"
+      | "workspace.renamed"
+      | "workspace.deleted"
+      | "file.uploaded"
+      | "file.renamed"
+      | "file.deleted"
+      | "file.downloaded"
+      | "member.added"
+      | "member.removed"
+      | "invite.sent"
+      | "invite.accepted"
+      | "invite.cancelled",
+    metadata: Record<string, unknown> | null,
+    entityType: "workspace" | "file" | "member" | "invite" | null,
+    entityId: string | null,
+    hoursAgo: number,
+  ) => {
+    const createdAt = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+    await db.insert(schema.workspaceActivity).values({
+      id: ulid(),
+      workspaceId,
+      actorId,
+      eventType,
+      metadata: metadata || null,
+      entityType: entityType || null,
+      entityId: entityId || null,
+      createdAt,
+    });
+  };
+
+  // Workspace creation events (oldest - 7 days ago)
+  await createActivityWithTime(
+    defaultWorkspaceId,
+    verifiedUser.id,
+    "workspace.created",
+    null,
+    "workspace",
+    defaultWorkspaceId,
+    7 * 24,
+  );
+
+  await createActivityWithTime(
+    personalWorkspaceId,
+    verifiedUser.id,
+    "workspace.created",
+    null,
+    "workspace",
+    personalWorkspaceId,
+    5 * 24,
+  );
+
+  await createActivityWithTime(
+    teamWorkspaceId,
+    verifiedUser.id,
+    "workspace.created",
+    null,
+    "workspace",
+    teamWorkspaceId,
+    3 * 24,
+  );
+
+  // Workspace rename event (4 days ago)
+  await createActivityWithTime(
+    personalWorkspaceId,
+    verifiedUser.id,
+    "workspace.renamed",
+    { oldName: "My Projects", newName: "Personal Projects" },
+    "workspace",
+    personalWorkspaceId,
+    4 * 24,
+  );
+
+  // File upload events (various times)
+  let hoursAgo = 6 * 24; // Start 6 days ago
+  for (const file of files) {
+    await createActivityWithTime(
+      file.workspaceId,
+      verifiedUser.id,
+      "file.uploaded",
+      {
+        filename: file.filename,
+        size: file.size,
+        contentType: file.contentType,
+      },
+      "file",
+      file.id,
+      hoursAgo,
+    );
+    hoursAgo -= 2; // Each file 2 hours earlier
+  }
+
+  // File rename event (2 days ago)
+  const fileToRename = files.find((f) => f.filename === "meeting-notes.txt");
+  if (fileToRename) {
+    await createActivityWithTime(
+      fileToRename.workspaceId,
+      verifiedUser.id,
+      "file.renamed",
+      {
+        oldFilename: "notes.txt",
+        newFilename: "meeting-notes.txt",
+      },
+      "file",
+      fileToRename.id,
+      2 * 24,
+    );
+  }
+
+  // File download events (recent - last 24 hours)
+  const filesToDownload = files.slice(0, 2);
+  for (let i = 0; i < filesToDownload.length; i++) {
+    await createActivityWithTime(
+      filesToDownload[i].workspaceId,
+      verifiedUser.id,
+      "file.downloaded",
+      { filename: filesToDownload[i].filename },
+      "file",
+      filesToDownload[i].id,
+      (i + 1) * 2, // 2h, 4h ago
+    );
+  }
+
+  // Member addition events (when members were added)
+  for (const member of members) {
+    const memberUserDetails = memberUser.id === member.userId ? memberUser : verifiedUser;
+    await createActivityWithTime(
+      member.workspaceId,
+      memberUserDetails.id,
+      "member.added",
+      {
+        memberEmail: memberUserDetails.email,
+        memberName: memberUserDetails.name,
+        role: "member",
+      },
+      "member",
+      member.id,
+      3 * 24, // 3 days ago
+    );
+  }
+
+  // Invite sent events
+  for (const invite of invites) {
+    await createActivityWithTime(
+      invite.workspaceId,
+      verifiedUser.id,
+      invite.status === "accepted" ? "invite.accepted" : "invite.sent",
+      { inviteEmail: invite.email, role: "member" },
+      "invite",
+      invite.id,
+      invite.status === "accepted" ? 2 * 24 : 1 * 24,
+    );
+  }
+
+  // One cancelled invite event (12 hours ago)
+  const cancelledInvite = invites.find((i) => i.status === "cancelled");
+  if (cancelledInvite) {
+    await createActivityWithTime(
+      cancelledInvite.workspaceId,
+      verifiedUser.id,
+      "invite.cancelled",
+      { inviteEmail: cancelledInvite.email },
+      "invite",
+      cancelledInvite.id,
+      12,
+    );
+  }
+
+  console.log("✅ Activity events created");
 }
 
 async function seedWorkspaceFixtures(users: CreatedUser[]) {
@@ -368,7 +556,7 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
     .returning();
   const emptyWorkspaceId = emptyWorkspace.id;
 
-  await addFilesToWorkspace(defaultWorkspaceId, [
+  const defaultFiles = await addFilesToWorkspace(defaultWorkspaceId, [
     {
       filename: "project-plan.pdf",
       contentType: "application/pdf",
@@ -386,7 +574,7 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
     },
   ]);
 
-  await addFilesToWorkspace(personalWorkspaceId, [
+  const personalFiles = await addFilesToWorkspace(personalWorkspaceId, [
     {
       filename: "budget.xlsx",
       contentType:
@@ -400,7 +588,7 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
     },
   ]);
 
-  await addFilesToWorkspace(teamWorkspaceId, [
+  const teamFiles = await addFilesToWorkspace(teamWorkspaceId, [
     {
       filename: "team-photo.jpg",
       contentType: "image/jpeg",
@@ -419,8 +607,10 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
     },
   ]);
 
+  const allFiles = [...defaultFiles, ...personalFiles, ...teamFiles];
+
   // Share default and team workspaces with member user
-  await db.insert(schema.workspaceMember).values([
+  const memberRecords = [
     {
       id: ulid(),
       workspaceId: defaultWorkspaceId,
@@ -431,13 +621,15 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
       workspaceId: teamWorkspaceId,
       userId: memberUser.id,
     },
-  ]);
+  ];
+  await db.insert(schema.workspaceMember).values(memberRecords);
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const pendingInvite = createHashedToken();
+  const pendingInviteId = ulid();
   await db.insert(schema.workspaceInvite).values({
-    id: ulid(),
+    id: pendingInviteId,
     workspaceId: defaultWorkspaceId,
     email: invitedUser.email,
     invitedBy: verifiedUser.id,
@@ -448,8 +640,9 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
   });
 
   const acceptedInvite = createHashedToken();
+  const acceptedInviteId = ulid();
   await db.insert(schema.workspaceInvite).values({
-    id: ulid(),
+    id: acceptedInviteId,
     workspaceId: teamWorkspaceId,
     email: "accepted-member@example.com",
     invitedBy: verifiedUser.id,
@@ -458,6 +651,33 @@ async function seedWorkspaceFixtures(users: CreatedUser[]) {
     status: "accepted",
     acceptedAt: new Date(),
   });
+
+  const allInvites = [
+    {
+      id: pendingInviteId,
+      workspaceId: defaultWorkspaceId,
+      email: invitedUser.email,
+      status: "pending",
+    },
+    {
+      id: acceptedInviteId,
+      workspaceId: teamWorkspaceId,
+      email: "accepted-member@example.com",
+      status: "accepted",
+    },
+  ];
+
+  // Seed activity events
+  await seedActivityEvents(
+    verifiedUser,
+    memberUser,
+    defaultWorkspaceId,
+    personalWorkspaceId,
+    teamWorkspaceId,
+    allFiles,
+    memberRecords,
+    allInvites,
+  );
 
   console.log("✅ Workspace fixtures created:");
   console.log(`   - Default workspace (${defaultWorkspaceId}) seeded`);

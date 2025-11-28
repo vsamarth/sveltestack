@@ -11,6 +11,10 @@ import {
   getWorkspaceById,
 } from "$lib/server/db/workspace";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
+import {
+  logWorkspaceCreated,
+  logWorkspaceRenamed,
+} from "$lib/server/db/activity";
 
 export const createWorkspace = command(z.string(), async (name) => {
   const { locals } = getRequestEvent();
@@ -20,6 +24,10 @@ export const createWorkspace = command(z.string(), async (name) => {
 
   try {
     const workspace = await createWorkspaceDb(name, locals.user.id);
+
+    // Log activity
+    await logWorkspaceCreated(workspace.id, locals.user.id);
+
     return {
       id: workspace.id,
       name: workspace.name,
@@ -54,6 +62,15 @@ export const updateWorkspace = command(
 
     try {
       const updated = await updateWorkspaceDb(workspaceId, name);
+
+      // Log activity
+      await logWorkspaceRenamed(
+        workspaceId,
+        locals.user.id,
+        workspace.name,
+        updated.name,
+      );
+
       return {
         id: updated.id,
         name: updated.name,
@@ -90,8 +107,11 @@ export const deleteWorkspace = command(z.string(), async (workspaceId) => {
     const remainingWorkspaces = userWorkspaces.filter(
       (w) => w.id !== workspaceId,
     );
+    
     await deleteWorkspaceDb(workspaceId);
 
+   // TODO: Figure out how to log workspace deleted
+    
     return {
       redirectTo: `/dashboard/workspace/${remainingWorkspaces[0].id}`,
     };
