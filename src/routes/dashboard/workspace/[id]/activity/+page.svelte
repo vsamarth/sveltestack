@@ -48,7 +48,7 @@
       <div class="w-full">
         <ActivityFeed
           activities={data.activities}
-          currentUserId={data.user.id}
+          currentUserId={data.currentUserId}
         />
       </div>
     {/if}

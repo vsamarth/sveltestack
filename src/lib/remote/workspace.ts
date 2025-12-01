@@ -11,6 +11,7 @@ import {
   getWorkspaceById,
 } from "$lib/server/db/workspace";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
+import { logWorkspaceDeleted } from "$lib/server/db/activity";
 
 export const createWorkspace = command(z.string(), async (name) => {
   const { locals } = getRequestEvent();
@@ -93,13 +94,12 @@ export const deleteWorkspace = command(z.string(), async (workspaceId) => {
       );
     }
 
-    const remainingWorkspaces = userWorkspaces.filter(
-      (w) => w.id !== workspaceId,
-    );
+    const remainingWorkspaces = userWorkspaces.filter((w) => w.id !== workspaceId);
+
+    // Log workspace deletion before actually deleting it
+    await logWorkspaceDeleted(workspaceId, locals.user.id);
 
     await deleteWorkspaceDb(workspaceId);
-
-    // TODO: Figure out how to log workspace deleted
 
     return {
       redirectTo: `/dashboard/workspace/${remainingWorkspaces[0].id}`,
