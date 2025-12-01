@@ -1,6 +1,6 @@
 import { db } from "./index";
 import { file, workspace } from "./schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { logFileUploaded, logFileDeleted, logFileRenamed } from "./activity";
 
 export async function createPendingFile(
@@ -9,6 +9,7 @@ export async function createPendingFile(
   storageKey: string,
   size: number,
   contentType: string,
+  dropTimestamp?: number,
 ) {
   const [newFile] = await db
     .insert(file)
@@ -19,6 +20,7 @@ export async function createPendingFile(
       size: size.toString(),
       contentType,
       status: "pending",
+      dropTimestamp: dropTimestamp || null,
     })
     .returning();
   return newFile;
@@ -74,7 +76,7 @@ export async function getWorkspaceFiles(
     .select()
     .from(file)
     .where(and(...conditions))
-    .orderBy(file.createdAt);
+    .orderBy(sql`COALESCE(${file.dropTimestamp}, EXTRACT(EPOCH FROM ${file.createdAt}) * 1000)`);
 }
 
 export async function getFileById(fileId: string) {

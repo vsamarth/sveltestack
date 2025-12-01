@@ -17,6 +17,10 @@
     MoreHorizontal,
     Pencil,
     Upload,
+    X,
+    Loader2,
+    CircleAlert,
+    RotateCcw,
   } from "@lucide/svelte";
   import prettyBytes from "pretty-bytes";
   import type { File } from "$lib/server/db/schema";
@@ -28,23 +32,54 @@
     "id" | "filename" | "size" | "contentType" | "createdAt"
   >;
 
+  export type UploadingFile = {
+    id: string;
+    serverFileId?: string; // The server's file ID once confirmed - used to dedupe with storedFiles
+    filename: string;
+    size: number;
+    contentType: string | null;
+    progress: number;
+    status: "uploading" | "error";
+    error?: string;
+  };
+
   let {
     files,
+    uploadingFiles = [],
+    deletingFileIds = new Set<string>(),
+    renamingFileIds = new Map<string, string>(),
     onDelete,
     onDownload,
     onPreview,
     onRename,
+    onCancelUpload,
+    onRetryUpload,
     disabled = false,
     disabledMessage,
   }: {
     files: StoredFile[];
+    uploadingFiles?: UploadingFile[];
+    deletingFileIds?: Set<string>;
+    renamingFileIds?: Map<string, string>;
     onDelete: (id: string, name: string) => void;
     onDownload: (id: string, name: string) => void;
     onPreview: (file: StoredFile) => void;
     onRename: (id: string, currentName: string) => void;
+    onCancelUpload?: (id: string) => void;
+    onRetryUpload?: (id: string) => void;
     disabled?: boolean;
     disabledMessage?: string;
   } = $props();
+
+  // Filter out uploading files that already exist in server data (by serverFileId)
+  // This prevents duplicates when server data loads before upload rows are removed
+  const serverFileIds = $derived(new Set(files.map((f) => f.id)));
+  const visibleUploadingFiles = $derived(
+    uploadingFiles.filter((uf) => !uf.serverFileId || !serverFileIds.has(uf.serverFileId))
+  );
+
+  // Compute whether to show the table (has files or uploading files)
+  const hasContent = $derived(files.length > 0 || visibleUploadingFiles.length > 0);
 
   function getFileIcon(contentType: string | null) {
     if (!contentType) return FileIcon;
@@ -116,7 +151,7 @@
     </Button>
   </div>
 
-  {#if files.length === 0}
+  {#if !hasContent}
     <!-- Empty State -->
     <FilesEmptyState {disabled} {disabledMessage} />
   {:else}
@@ -144,24 +179,47 @@
           </Table.Row>
         </Table.Header>
         <Table.Body>
+          <!-- Existing files -->
           {#each files as file (file.id)}
             {@const Icon = getFileIcon(file.contentType)}
             {@const canPreview = isPreviewable(file.contentType)}
-            <Table.Row class="group hover:bg-muted/40 border-b last:border-b-0">
+            {@const isDeleting = deletingFileIds.has(file.id)}
+            {@const isRenaming = renamingFileIds.has(file.id)}
+            {@const optimisticName = renamingFileIds.get(file.id)}
+            {@const isBusy = isDeleting || isRenaming}
+            <Table.Row 
+              class="group border-b last:border-b-0 transition-all duration-200 {isDeleting ? 'opacity-50 bg-destructive/5' : isRenaming ? 'bg-muted/20' : 'hover:bg-muted/40'}"
+            >
               <Table.Cell class="py-3 pl-4 w-12">
-                <Icon class="h-4 w-4 text-muted-foreground shrink-0" />
+                {#if isDeleting}
+                  <Loader2 class="h-4 w-4 text-destructive shrink-0 animate-spin" />
+                {:else if isRenaming}
+                  <Loader2 class="h-4 w-4 text-primary shrink-0 animate-spin" />
+                {:else}
+                  <Icon class="h-4 w-4 text-muted-foreground shrink-0" />
+                {/if}
               </Table.Cell>
               <Table.Cell class="py-3 min-w-0 whitespace-normal">
                 <span
-                  class="text-sm font-normal text-foreground truncate block"
+                  class="text-sm font-normal truncate block {isDeleting ? 'text-muted-foreground line-through' : 'text-foreground'}"
                 >
-                  {file.filename}
+                  {isRenaming && optimisticName ? optimisticName : file.filename}
                 </span>
               </Table.Cell>
               <Table.Cell class="py-3 w-32">
-                <Badge variant="secondary" class="text-xs tracking-wide">
-                  {getFileTypeLabel(file.contentType)}
-                </Badge>
+                {#if isDeleting}
+                  <Badge variant="destructive" class="text-xs tracking-wide">
+                    Deleting
+                  </Badge>
+                {:else if isRenaming}
+                  <Badge variant="secondary" class="text-xs tracking-wide">
+                    Renaming
+                  </Badge>
+                {:else}
+                  <Badge variant="secondary" class="text-xs tracking-wide">
+                    {getFileTypeLabel(file.contentType)}
+                  </Badge>
+                {/if}
               </Table.Cell>
               <Table.Cell class="py-3 w-28">
                 <span
@@ -171,69 +229,140 @@
                 </span>
               </Table.Cell>
               <Table.Cell class="py-3 pr-4 text-right w-24">
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger>
-                    {#snippet child({ props })}
-                      <Button
-                        {...props}
-                        variant="ghost"
-                        size="icon"
-                        class="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onclick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <MoreHorizontal class="h-4 w-4" />
-                        <span class="sr-only">Actions</span>
-                      </Button>
-                    {/snippet}
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content align="end" class="w-40">
-                    {#if canPreview}
+                {#if !isBusy}
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      {#snippet child({ props })}
+                        <Button
+                          {...props}
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onclick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <MoreHorizontal class="h-4 w-4" />
+                          <span class="sr-only">Actions</span>
+                        </Button>
+                      {/snippet}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end" class="w-40">
+                      {#if canPreview}
+                        <DropdownMenu.Item
+                          onclick={(e) => {
+                            e.stopPropagation();
+                            onPreview(file);
+                          }}
+                          class="cursor-pointer text-sm"
+                        >
+                          <Eye class="mr-2 h-4 w-4" />
+                          <span>Preview</span>
+                        </DropdownMenu.Item>
+                      {/if}
                       <DropdownMenu.Item
                         onclick={(e) => {
                           e.stopPropagation();
-                          onPreview(file);
+                          onDownload(file.id, file.filename);
                         }}
                         class="cursor-pointer text-sm"
                       >
-                        <Eye class="mr-2 h-4 w-4" />
-                        <span>Preview</span>
+                        <Download class="mr-2 h-4 w-4" />
+                        <span>Download</span>
                       </DropdownMenu.Item>
-                    {/if}
-                    <DropdownMenu.Item
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onDownload(file.id, file.filename);
-                      }}
-                      class="cursor-pointer text-sm"
-                    >
-                      <Download class="mr-2 h-4 w-4" />
-                      <span>Download</span>
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onRename(file.id, file.filename);
-                      }}
-                      class="cursor-pointer text-sm"
-                    >
-                      <Pencil class="mr-2 h-4 w-4" />
-                      <span>Rename</span>
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onDelete(file.id, file.filename);
-                      }}
-                      class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
-                    >
-                      <Trash2 class="mr-2 h-4 w-4 text-destructive" />
-                      <span>Delete</span>
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
+                      <DropdownMenu.Item
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          onRename(file.id, file.filename);
+                        }}
+                        class="cursor-pointer text-sm"
+                      >
+                        <Pencil class="mr-2 h-4 w-4" />
+                        <span>Rename</span>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Separator />
+                      <DropdownMenu.Item
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          onDelete(file.id, file.filename);
+                        }}
+                        class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <Trash2 class="mr-2 h-4 w-4 text-destructive" />
+                        <span>Delete</span>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                {/if}
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+
+          <!-- Uploading files (shown at the bottom, where they'll appear once complete) -->
+          <!-- Filtered to exclude files that already appear in server data -->
+          {#each visibleUploadingFiles as uploadFile (uploadFile.id)}
+            {@const Icon = getFileIcon(uploadFile.contentType)}
+            {@const isError = uploadFile.status === "error"}
+            <Table.Row 
+              class="group border-b last:border-b-0 {isError ? 'bg-destructive/5' : 'bg-muted/10'}"
+            >
+              <Table.Cell class="py-3 pl-4 w-12">
+                {#if isError}
+                  <CircleAlert class="h-4 w-4 text-destructive shrink-0" />
+                {:else}
+                  <Loader2 class="h-4 w-4 text-primary shrink-0 animate-spin" />
+                {/if}
+              </Table.Cell>
+              <Table.Cell class="py-3 min-w-0 whitespace-normal">
+                <span class="text-sm font-normal truncate block {isError ? 'text-destructive' : 'text-foreground'}">
+                  {uploadFile.filename}
+                </span>
+              </Table.Cell>
+              <Table.Cell class="py-3 w-32">
+                <Badge 
+                  variant={isError ? "destructive" : "secondary"} 
+                  class="text-xs tracking-wide"
+                >
+                  {#if isError}
+                    Failed
+                  {:else}
+                    Uploading
+                  {/if}
+                </Badge>
+              </Table.Cell>
+              <Table.Cell class="py-3 w-28">
+                {#if isError}
+                  <span class="text-sm text-muted-foreground font-mono whitespace-nowrap">
+                    {prettyBytes(uploadFile.size)}
+                  </span>
+                {:else}
+                  <span class="text-sm text-muted-foreground font-mono whitespace-nowrap">
+                    {Math.round(uploadFile.progress)}%
+                  </span>
+                {/if}
+              </Table.Cell>
+              <Table.Cell class="py-3 pr-4 text-right w-24">
+                {#if isError && onRetryUpload}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onclick={() => onRetryUpload(uploadFile.id)}
+                  >
+                    <RotateCcw class="h-4 w-4" />
+                    <span class="sr-only">Retry upload</span>
+                  </Button>
+                {:else if onCancelUpload}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onclick={() => onCancelUpload(uploadFile.id)}
+                  >
+                    <X class="h-4 w-4" />
+                    <span class="sr-only">Cancel upload</span>
+                  </Button>
+                {/if}
               </Table.Cell>
             </Table.Row>
           {/each}

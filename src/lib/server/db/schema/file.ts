@@ -1,4 +1,4 @@
-import { pgTable, timestamp, text } from "drizzle-orm/pg-core";
+import { pgTable, timestamp, text, bigint } from "drizzle-orm/pg-core";
 import { ulid } from "ulid";
 import { workspace } from "./workspace";
 
@@ -17,6 +17,7 @@ export const file = pgTable("file", {
   workspaceId: text("workspace_id")
     .notNull()
     .references(() => workspace.id, { onDelete: "cascade" }),
+  dropTimestamp: bigint("drop_timestamp", { mode: "number" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

@@ -10,7 +10,7 @@
   import { X } from "@lucide/svelte";
   import { invalidateAll } from "$app/navigation";
   import { toast } from "svelte-sonner";
-  import FileTable from "$lib/components/file-table.svelte";
+  import FileTable, { type UploadingFile } from "$lib/components/file-table.svelte";
   import { siteConfig } from "$lib/config";
   import DropzoneWrapper from "$lib/components/dropzone-wrapper.svelte";
   import {
@@ -29,6 +29,9 @@
     "id" | "filename" | "size" | "contentType" | "createdAt"
   >;
 
+  // Track files currently being uploaded
+  let uploadingFiles = $state<UploadingFile[]>([]);
+
   function createUppyInstance() {
     const instance = new Uppy({
       autoProceed: true,
@@ -40,11 +43,15 @@
       shouldUseMultipart: false,
       async getUploadParameters(file) {
         try {
+          // Get drop timestamp - use the current time (all files in a batch will be close together)
+          const dropTimestamp = Date.now();
+          
           const responseData = await getPresignedUploadUrlRemote({
             filename: file.name,
             contentType: file.type,
             workspaceId: data.workspace.id,
             size: typeof file.size === "number" ? file.size : undefined,
+            dropTimestamp,
           });
 
           // Store fileId for confirmation
@@ -71,6 +78,31 @@
 
     // Setup event listeners
 
+    // When a file is added, show it in the uploading list immediately
+    instance.on("file-added", (file) => {
+      uploadingFiles = [
+        ...uploadingFiles,
+        {
+          id: file.id,
+          filename: file.name || "Unknown file",
+          size: typeof file.size === "number" ? file.size : 0,
+          contentType: file.type || null,
+          progress: 0,
+          status: "uploading",
+        },
+      ];
+    });
+
+    // Track upload progress
+    instance.on("upload-progress", (file, progress) => {
+      if (file && progress.bytesTotal) {
+        const percentage = (progress.bytesUploaded / progress.bytesTotal) * 100;
+        uploadingFiles = uploadingFiles.map((f) =>
+          f.id === file.id ? { ...f, progress: percentage } : f
+        );
+      }
+    });
+
     instance.on("upload-success", async (file) => {
       if (file && file.meta.fileId && typeof file.meta.fileId === "string") {
         try {
@@ -78,24 +110,52 @@
           await confirmUpload({
             fileId: file.meta.fileId,
           });
+
+          // Store serverFileId for deduplication - row will auto-hide when server data loads
+          uploadingFiles = uploadingFiles.map((f) =>
+            f.id === file.id 
+              ? { ...f, serverFileId: file.meta.fileId as string } 
+              : f
+          );
+
+          // Refresh data - deduplication filter will hide this row when server data loads
           await invalidateAll();
 
           toast.success("File uploaded", {
             description: file.name,
           });
+
+          // Don't remove from uploadingFiles - let deduplication filter handle it
+          // The visibleUploadingFiles filter will automatically hide it when server data includes the file
         } catch (error) {
           console.error("Failed to confirm upload:", error);
+          // Mark as error
+          uploadingFiles = uploadingFiles.map((f) =>
+            f.id === file.id
+              ? { ...f, status: "error" as const, error: "Failed to confirm upload" }
+              : f
+          );
           toast.error("Failed to confirm upload");
         }
       }
     });
 
-    instance.on("upload-error", (file) => {
+    instance.on("upload-error", (file, error) => {
       if (file) {
+        uploadingFiles = uploadingFiles.map((f) =>
+          f.id === file.id
+            ? { ...f, status: "error" as const, error: error?.message || "Upload failed" }
+            : f
+        );
         toast.error("Upload failed", {
           description: file.name,
         });
       }
+    });
+
+    // When a file is removed (cancelled or dismissed), remove from uploading list
+    instance.on("file-removed", (file) => {
+      uploadingFiles = uploadingFiles.filter((f) => f.id !== file.id);
     });
 
     instance.on("restriction-failed", (file, error) => {
@@ -113,6 +173,37 @@
   let selectedImage = $state<{ url: string; filename: string } | null>(null);
 
   let inputElement = $state<HTMLInputElement | null>(null);
+
+  // Cleanup uploadingFiles when server data confirms the files exist
+  // This runs reactively when storedFiles or uploadingFiles change
+  $effect(() => {
+    const serverFileIds = new Set(storedFiles.map((f) => f.id));
+    // Remove uploads that have been confirmed in server data
+    const hasServerMatches = uploadingFiles.some(
+      (uf) => uf.serverFileId && serverFileIds.has(uf.serverFileId)
+    );
+    
+    if (hasServerMatches) {
+      // Server data has loaded - clean up matching uploads
+      uploadingFiles = uploadingFiles.filter(
+        (uf) => !uf.serverFileId || !serverFileIds.has(uf.serverFileId)
+      );
+    }
+  });
+
+  // Cancel an upload
+  function handleCancelUpload(fileId: string) {
+    uppy.removeFile(fileId);
+  }
+
+  // Retry a failed upload
+  function handleRetryUpload(fileId: string) {
+    uppy.retryUpload(fileId);
+    // Reset status to uploading
+    uploadingFiles = uploadingFiles.map((f) =>
+      f.id === fileId ? { ...f, status: "uploading" as const, progress: 0, error: undefined } : f
+    );
+  }
 
   // Check if file is an image
   function isImageFile(contentType: string | null): boolean {
@@ -168,10 +259,12 @@
 
   let deleteDialogOpen = $state(false);
   let fileToDelete = $state<{ id: string; name: string } | null>(null);
+  let deletingFileIds = $state<Set<string>>(new Set());
 
   let renameDialogOpen = $state(false);
   let fileToRename = $state<{ id: string; name: string } | null>(null);
   let newFilename = $state("");
+  let renamingFileIds = $state<Map<string, string>>(new Map()); // fileId -> new name (for optimistic display)
 
   // Open delete confirmation dialog
   function openDeleteDialog(fileId: string, filename: string) {
@@ -183,17 +276,26 @@
   async function confirmDeleteFile() {
     if (!fileToDelete) return;
 
+    const fileId = fileToDelete.id;
+    const fileName = fileToDelete.name;
+
+    // Close dialog immediately and show deleting state
+    deleteDialogOpen = false;
+    deletingFileIds = new Set([...deletingFileIds, fileId]);
+
     try {
-      await deleteFile(fileToDelete.id);
+      await deleteFile(fileId);
       await invalidateAll();
       toast.success("File deleted", {
-        description: fileToDelete.name,
+        description: fileName,
       });
-      deleteDialogOpen = false;
-      fileToDelete = null;
     } catch (error) {
       console.error("Failed to delete file:", error);
       toast.error("Failed to delete file");
+    } finally {
+      // Remove from deleting set
+      deletingFileIds = new Set([...deletingFileIds].filter(id => id !== fileId));
+      fileToDelete = null;
     }
   }
 
@@ -208,21 +310,31 @@
   async function confirmRenameFile() {
     if (!fileToRename || !newFilename.trim()) return;
 
+    const fileId = fileToRename.id;
+    const oldName = fileToRename.name;
+    const targetName = newFilename.trim();
+
+    // Close dialog immediately and show renaming state with optimistic name
+    renameDialogOpen = false;
+    renamingFileIds = new Map([...renamingFileIds, [fileId, targetName]]);
+
     try {
       await renameFile({
-        fileId: fileToRename.id,
-        newFilename: newFilename.trim(),
+        fileId,
+        newFilename: targetName,
       });
       await invalidateAll();
       toast.success("File renamed", {
-        description: `"${fileToRename.name}" → "${newFilename.trim()}"`,
+        description: `"${oldName}" → "${targetName}"`,
       });
-      renameDialogOpen = false;
-      fileToRename = null;
-      newFilename = "";
     } catch (error) {
       console.error("Failed to rename file:", error);
       toast.error("Failed to rename file");
+    } finally {
+      // Clean up renaming state
+      renamingFileIds = new Map([...renamingFileIds].filter(([id]) => id !== fileId));
+      fileToRename = null;
+      newFilename = "";
     }
   }
 
@@ -274,10 +386,15 @@
           <!-- Files table -->
           <FileTable
             files={storedFiles}
+            {uploadingFiles}
+            {deletingFileIds}
+            {renamingFileIds}
             onDelete={openDeleteDialog}
             onDownload={handleDownloadFile}
             onPreview={handleFileClick}
             onRename={openRenameDialog}
+            onCancelUpload={handleCancelUpload}
+            onRetryUpload={handleRetryUpload}
           />
         </div>
       </DropzoneWrapper>
