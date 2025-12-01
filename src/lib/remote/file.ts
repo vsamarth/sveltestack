@@ -12,6 +12,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { S3Client } from "@aws-sdk/client-s3";
 import { env } from "$lib/server/env";
 import { getPresignedDownloadUrl } from "$lib/server/storage";
+import { logFileDownloaded } from "$lib/server/db/activity";
 
 const s3Client = new S3Client({
   endpoint: env.STORAGE_ENDPOINT,
@@ -44,7 +45,8 @@ export const deleteFile = command(z.string(), async (fileId) => {
       error(403, "Forbidden");
     }
 
-    await deleteFileDb(fileId);
+    await deleteFileDb(fileId, locals.user.id);
+
     return { success: true };
   } catch (err) {
     console.error("Delete file error:", err);
@@ -88,7 +90,8 @@ export const renameFile = command(
         error(403, "Forbidden");
       }
 
-      await renameFileDb(fileId, newFilename.trim());
+      await renameFileDb(fileId, newFilename.trim(), locals.user.id);
+
       return { success: true };
     } catch (err) {
       console.error("Rename file error:", err);
@@ -140,7 +143,6 @@ export const getFilePreviewUrl = command(z.string(), async (fileId) => {
     const previewUrl = await getSignedUrl(s3Client, getObjectCommand, {
       expiresIn: 3600,
     });
-
     return {
       url: previewUrl,
       filename: file.filename,
@@ -191,6 +193,14 @@ export const getFileDownloadUrl = command(z.string(), async (fileId) => {
       file.storageKey,
       file.filename,
       3600,
+    );
+
+    // Log activity
+    await logFileDownloaded(
+      file.workspaceId,
+      locals.user.id,
+      fileId,
+      file.filename,
     );
 
     return {

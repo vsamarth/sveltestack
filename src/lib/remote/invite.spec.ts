@@ -17,6 +17,10 @@ import { createMockRequestEvent } from "../../../tests/helpers/mock-request";
 import { getPendingInvites } from "$lib/server/db/invite";
 import { getWorkspaceMembersWithDetails } from "$lib/server/db/membership";
 import { setupAllMocks } from "../../../tests/helpers/mocks";
+import {
+  findActivity,
+  expectActivity,
+} from "../../../tests/helpers/activity-helpers";
 
 // Mock $app/server
 const mockGetRequestEvent = vi.fn();
@@ -83,6 +87,23 @@ describe("invite integration tests", () => {
       const invites = await getPendingInvites(workspace.id);
       expect(invites).toHaveLength(1);
       expect(invites[0].email).toBe("newmember@example.com");
+    });
+
+    it("should log invite.sent activity", async () => {
+      const workspace = await createWorkspace();
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      const result = await sendInvite({
+        workspaceId: workspace.id,
+        email: "newmember@example.com",
+      });
+      const activity = await findActivity(workspace.id, "invite.sent");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "invite.sent",
+        entityType: "invite",
+        entityId: result.inviteId,
+        metadataFields: ["inviteEmail", "role"],
+      });
     });
 
     it("should create invite with 7-day expiration", async () => {
@@ -177,6 +198,26 @@ describe("invite integration tests", () => {
       expect(result.success).toBe(true);
       const invites = await getPendingInvites(workspace.id);
       expect(invites).toHaveLength(0);
+    });
+
+    it("should log invite.cancelled activity", async () => {
+      const workspace = await createWorkspace();
+      const invite = await createTestInvite({
+        workspaceId: workspace.id,
+        email: "member@example.com",
+        invitedBy: testUser1.id,
+        status: "pending",
+      });
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await cancelInvite(invite.id);
+      const activity = await findActivity(workspace.id, "invite.cancelled");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "invite.cancelled",
+        entityType: "invite",
+        entityId: invite.id,
+        metadataFields: ["inviteEmail"],
+      });
     });
 
     it("should return 403 when user is not owner", async () => {
@@ -285,6 +326,27 @@ describe("invite integration tests", () => {
       expect(result.success).toBe(true);
       const members = await getWorkspaceMembersWithDetails(workspace.id);
       expect(members.find((m) => m.userId === testUser2.id)).toBeUndefined();
+    });
+
+    it("should log member.removed activity", async () => {
+      const workspace = await createWorkspace();
+      await createTestMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await removeMember({
+        workspaceId: workspace.id,
+        userId: testUser2.id,
+      });
+      const activity = await findActivity(workspace.id, "member.removed");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "member.removed",
+        entityType: "member",
+        entityId: testUser2.id,
+        metadataFields: ["memberEmail", "memberName"],
+      });
     });
 
     it("should return 403 when user is not owner", async () => {

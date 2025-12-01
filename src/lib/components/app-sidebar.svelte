@@ -8,6 +8,7 @@
     ChevronRightIcon,
     FolderIcon,
     SettingsIcon,
+    ActivityIcon,
   } from "@lucide/svelte";
   import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
   import { Button } from "$lib/components/ui/button";
@@ -138,6 +139,21 @@
                   </Sidebar.MenuSubItem>
                   <Sidebar.MenuSubItem>
                     <Sidebar.MenuSubButton
+                      isActive={isSubPageActive(workspace.id, "activity")}
+                    >
+                      {#snippet child({ props })}
+                        <a
+                          href={`/dashboard/workspace/${workspace.id}/activity`}
+                          {...props}
+                        >
+                          <ActivityIcon class="h-4 w-4" />
+                          <span>Activity</span>
+                        </a>
+                      {/snippet}
+                    </Sidebar.MenuSubButton>
+                  </Sidebar.MenuSubItem>
+                  <Sidebar.MenuSubItem>
+                    <Sidebar.MenuSubButton
                       isActive={isSubPageActive(workspace.id, "settings")}
                     >
                       {#snippet child({ props })}
@@ -201,6 +217,21 @@
                           >
                             <FolderIcon class="h-4 w-4" />
                             <span>Files</span>
+                          </a>
+                        {/snippet}
+                      </Sidebar.MenuSubButton>
+                    </Sidebar.MenuSubItem>
+                    <Sidebar.MenuSubItem>
+                      <Sidebar.MenuSubButton
+                        isActive={isSubPageActive(workspace.id, "activity")}
+                      >
+                        {#snippet child({ props })}
+                          <a
+                            href={`/dashboard/workspace/${workspace.id}/activity`}
+                            {...props}
+                          >
+                            <ActivityIcon class="h-4 w-4" />
+                            <span>Activity</span>
                           </a>
                         {/snippet}
                       </Sidebar.MenuSubButton>

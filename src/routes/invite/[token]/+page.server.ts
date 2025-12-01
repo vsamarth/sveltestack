@@ -185,7 +185,7 @@ export const actions: Actions = {
       }
 
       // Cancel the invite (marking it as declined)
-      await cancelInvite(invite.id);
+      await cancelInvite(invite.id, locals.user.id);
 
       return { success: true, declined: true };
     } catch (err) {

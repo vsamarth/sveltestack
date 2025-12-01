@@ -10,6 +10,10 @@ import {
 import { createMockRequestEvent } from "../../../tests/helpers/mock-request";
 import { getFileById } from "$lib/server/db/file";
 import { setupAllMocks } from "../../../tests/helpers/mocks";
+import {
+  findActivity,
+  expectActivity,
+} from "../../../tests/helpers/activity-helpers";
 
 // Mock $app/server
 const mockGetRequestEvent = vi.fn();
@@ -163,6 +167,27 @@ describe("upload integration tests", () => {
       const updatedFile = await getFileById(file.id);
       expect(updatedFile?.status).toBe("completed");
       expect(updatedFile?.updatedAt).toBeDefined();
+    });
+
+    it("should log file.uploaded activity", async () => {
+      const workspace = await createWorkspace();
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "test.txt",
+        status: "pending",
+        size: 1024,
+        contentType: "text/plain",
+      });
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await confirmUpload({ fileId: file.id });
+      const activity = await findActivity(workspace.id, "file.uploaded");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "file.uploaded",
+        entityType: "file",
+        entityId: file.id,
+        metadataFields: ["filename", "size", "contentType"],
+      });
     });
 
     it("should work for both owners and members", async () => {

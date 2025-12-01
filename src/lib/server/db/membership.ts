@@ -2,12 +2,25 @@ import { db } from ".";
 import { and, eq } from "drizzle-orm";
 import { workspaceMember, workspace, user } from "./schema";
 import { getWorkspaces } from "./workspace";
+import { logMemberAdded, logMemberRemoved } from "./activity";
 
 export async function addMember(
   workspaceId: string,
   userId: string,
+  actorId: string,
   role: "member" = "member",
 ) {
+  const userData = await db
+    .select({ name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (!userData) {
+    throw new Error("User not found");
+  }
+
   const result = await db
     .insert(workspaceMember)
     .values({
@@ -17,10 +30,45 @@ export async function addMember(
     })
     .returning();
 
+  await logMemberAdded(
+    workspaceId,
+    actorId,
+    result[0].id,
+    userData.email,
+    userData.name,
+    role,
+  );
+
   return result[0];
 }
 
-export async function removeMember(workspaceId: string, userId: string) {
+export async function removeMember(
+  workspaceId: string,
+  userId: string,
+  actorId: string,
+) {
+  const memberDetails = await db
+    .select({
+      id: workspaceMember.id,
+      userId: workspaceMember.userId,
+      userEmail: user.email,
+      userName: user.name,
+    })
+    .from(workspaceMember)
+    .innerJoin(user, eq(workspaceMember.userId, user.id))
+    .where(
+      and(
+        eq(workspaceMember.workspaceId, workspaceId),
+        eq(workspaceMember.userId, userId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (!memberDetails) {
+    throw new Error("Member not found");
+  }
+
   await db
     .delete(workspaceMember)
     .where(
@@ -29,6 +77,14 @@ export async function removeMember(workspaceId: string, userId: string) {
         eq(workspaceMember.userId, userId),
       ),
     );
+
+  await logMemberRemoved(
+    workspaceId,
+    actorId,
+    userId,
+    memberDetails.userEmail,
+    memberDetails.userName,
+  );
 }
 
 export async function getWorkspaceMembers(workspaceId: string) {

@@ -6,6 +6,9 @@ import {
   cancelInvite as cancelInviteDb,
   getPendingInvites as getPendingInvitesDb,
 } from "$lib/server/db/invite";
+import { workspaceInvite } from "$lib/server/db/schema";
+import { db } from "$lib/server/db";
+import { eq } from "drizzle-orm";
 import {
   getWorkspaceMembersWithDetails,
   removeMember as removeMemberDb,
@@ -92,19 +95,25 @@ export const cancelInvite = command(z.string(), async (inviteId) => {
   }
 
   try {
-    const cancelled = await cancelInviteDb(inviteId);
-    if (!cancelled) {
+    // Get invite first to check workspace ownership
+    const invite = await db
+      .select()
+      .from(workspaceInvite)
+      .where(eq(workspaceInvite.id, inviteId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!invite) {
       error(404, "Invite not found");
     }
 
     // Verify user owns the workspace
-    const isOwner = await userOwnsWorkspace(
-      cancelled.workspaceId,
-      locals.user.id,
-    );
+    const isOwner = await userOwnsWorkspace(invite.workspaceId, locals.user.id);
     if (!isOwner) {
       error(403, "Only workspace owners can cancel invites");
     }
+
+    await cancelInviteDb(inviteId, locals.user.id);
 
     return { success: true };
   } catch (err) {
@@ -182,7 +191,8 @@ export const removeMember = command(
     }
 
     try {
-      await removeMemberDb(workspaceId, userId);
+      await removeMemberDb(workspaceId, userId, locals.user.id);
+
       return { success: true };
     } catch (err) {
       console.error("Failed to remove member:", err);

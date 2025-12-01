@@ -1,6 +1,7 @@
 import { db } from "./index";
 import { file, workspace } from "./schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { logFileUploaded, logFileDeleted, logFileRenamed } from "./activity";
 
 export async function createPendingFile(
   workspaceId: string,
@@ -23,12 +24,28 @@ export async function createPendingFile(
   return newFile;
 }
 
-export async function confirmFileUpload(fileId: string) {
+export async function confirmFileUpload(fileId: string, actorId: string) {
+  const fileData = await getFileById(fileId);
+  if (!fileData) {
+    throw new Error("File not found");
+  }
+
   const [updated] = await db
     .update(file)
     .set({ status: "completed", updatedAt: new Date() })
     .where(eq(file.id, fileId))
     .returning();
+
+  // Log activity
+  await logFileUploaded(
+    fileData.workspaceId,
+    actorId,
+    fileId,
+    fileData.filename,
+    fileData.size || undefined,
+    fileData.contentType || undefined,
+  );
+
   return updated;
 }
 
@@ -65,21 +82,54 @@ export async function getFileById(fileId: string) {
   return result;
 }
 
-export async function deleteFile(fileId: string) {
+export async function deleteFile(fileId: string, actorId: string) {
+  const fileData = await getFileById(fileId);
+  if (!fileData) {
+    throw new Error("File not found");
+  }
+
   const [deleted] = await db
     .update(file)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(eq(file.id, fileId))
     .returning();
+
+  await logFileDeleted(
+    fileData.workspaceId,
+    actorId,
+    fileId,
+    fileData.filename,
+  );
+
   return deleted;
 }
 
-export async function renameFile(fileId: string, newFilename: string) {
+export async function renameFile(
+  fileId: string,
+  newFilename: string,
+  actorId: string,
+) {
+  const fileData = await getFileById(fileId);
+  if (!fileData) {
+    throw new Error("File not found");
+  }
+
+  const oldFilename = fileData.filename;
+
   const [updated] = await db
     .update(file)
     .set({ filename: newFilename, updatedAt: new Date() })
     .where(eq(file.id, fileId))
     .returning();
+
+  await logFileRenamed(
+    fileData.workspaceId,
+    actorId,
+    fileId,
+    oldFilename,
+    newFilename,
+  );
+
   return updated;
 }
 

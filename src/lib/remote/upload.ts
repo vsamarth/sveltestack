@@ -94,7 +94,7 @@ export const confirmUpload = command(
     }
 
     // Mark file as completed
-    const updatedFile = await confirmFileUpload(fileId);
+    const updatedFile = await confirmFileUpload(fileId, locals.user.id);
 
     if (!updatedFile) {
       error(404, "File not found");
