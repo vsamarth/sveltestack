@@ -3,9 +3,9 @@
  * Update these values to customize your application's branding and metadata
  */
 export const siteConfig = {
-  name: "Vault",
+  name: "SvelteStack",
   description:
-    "Open-source, production-ready starter kit for SvelteKit. Complete with authentication, database, file storage, and a fully-functional demo app.",
+    "A reasonable foundation for ambitious Svelte apps. Production-ready building blocks for authentication, workspaces, members, roles, activity logs, and more.",
   url: "https://sveltestack.dev",
   repository: "https://github.com/vsamarth/sveltestack",
 } as const;

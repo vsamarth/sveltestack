@@ -10,6 +10,7 @@
 @import "@fontsource/jetbrains-mono/500.css";
 @import "@fontsource/jetbrains-mono/600.css";
 @import "@fontsource/jetbrains-mono/700.css";
+@import "@fontsource/instrument-serif/400.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -86,6 +87,7 @@
   --font-sans:
     "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -134,5 +136,42 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .gradient-hero {
+    background: linear-gradient(
+      135deg,
+      oklch(0.99 0.01 250) 0%,
+      oklch(0.97 0.01 220) 100%
+    );
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(
+      180deg,
+      oklch(1 0 0) 0%,
+      oklch(0.98 0.005 250) 100%
+    );
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
   }
 }
