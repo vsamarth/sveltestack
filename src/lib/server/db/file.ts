@@ -76,7 +76,9 @@ export async function getWorkspaceFiles(
     .select()
     .from(file)
     .where(and(...conditions))
-    .orderBy(sql`COALESCE(${file.dropTimestamp}, EXTRACT(EPOCH FROM ${file.createdAt}) * 1000)`);
+    .orderBy(
+      sql`COALESCE(${file.dropTimestamp}, EXTRACT(EPOCH FROM ${file.createdAt}) * 1000)`,
+    );
 }
 
 export async function getFileById(fileId: string) {
