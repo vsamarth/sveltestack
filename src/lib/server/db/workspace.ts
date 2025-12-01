@@ -1,7 +1,7 @@
 import { db } from ".";
 import { and, eq } from "drizzle-orm";
 import { userPreferences, workspace } from "./schema";
-import { logWorkspaceCreated, logWorkspaceRenamed } from "./activity";
+import * as events from "../events";
 
 export async function createDefaultWorkspace(userId: string) {
   const newWorkspace = await createWorkspace("Personal", userId);
@@ -48,7 +48,7 @@ export async function createWorkspace(name: string, userId: string) {
     .returning();
 
   const newWorkspace = result[0];
-  await logWorkspaceCreated(newWorkspace.id, userId);
+  await events.onWorkspaceCreated(newWorkspace.id, userId);
 
   return newWorkspace;
 }
@@ -70,7 +70,7 @@ export async function updateWorkspace(
     .returning();
 
   const updated = result[0];
-  await logWorkspaceRenamed(
+  await events.onWorkspaceRenamed(
     workspaceId,
     userId,
     oldWorkspace.name,

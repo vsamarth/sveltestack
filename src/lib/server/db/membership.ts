@@ -2,7 +2,7 @@ import { db } from ".";
 import { and, eq } from "drizzle-orm";
 import { workspaceMember, workspace, user } from "./schema";
 import { getWorkspaces } from "./workspace";
-import { logMemberAdded, logMemberRemoved } from "./activity";
+import * as events from "../events";
 
 export async function addMember(
   workspaceId: string,
@@ -30,7 +30,7 @@ export async function addMember(
     })
     .returning();
 
-  await logMemberAdded(
+  await events.onMemberAdded(
     workspaceId,
     actorId,
     result[0].id,
@@ -78,7 +78,7 @@ export async function removeMember(
       ),
     );
 
-  await logMemberRemoved(
+  await events.onMemberRemoved(
     workspaceId,
     actorId,
     userId,

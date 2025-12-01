@@ -1,7 +1,7 @@
 import { db } from "./index";
 import { file, workspace } from "./schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
-import { logFileUploaded, logFileDeleted, logFileRenamed } from "./activity";
+import * as events from "../events";
 
 export async function createPendingFile(
   workspaceId: string,
@@ -39,7 +39,7 @@ export async function confirmFileUpload(fileId: string, actorId: string) {
     .returning();
 
   // Log activity
-  await logFileUploaded(
+  await events.onFileUploaded(
     fileData.workspaceId,
     actorId,
     fileId,
@@ -98,7 +98,7 @@ export async function deleteFile(fileId: string, actorId: string) {
     .where(eq(file.id, fileId))
     .returning();
 
-  await logFileDeleted(
+  await events.onFileDeleted(
     fileData.workspaceId,
     actorId,
     fileId,
@@ -126,7 +126,7 @@ export async function renameFile(
     .where(eq(file.id, fileId))
     .returning();
 
-  await logFileRenamed(
+  await events.onFileRenamed(
     fileData.workspaceId,
     actorId,
     fileId,
