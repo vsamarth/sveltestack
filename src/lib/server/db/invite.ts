@@ -194,7 +194,7 @@ export async function acceptInvite(
 
   // Check if user is already a member
   const existingMember = await db
-    .select({ id: workspaceMember.id })
+    .select()
     .from(workspaceMember)
     .where(
       and(

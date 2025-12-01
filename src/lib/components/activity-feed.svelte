@@ -71,20 +71,33 @@
   };
 
   const getDateKey = (date: Date) => {
-    const d = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const activityDate = new Date(d);
-    activityDate.setHours(0, 0, 0, 0);
-    if (+activityDate === +today) return "Today";
-    if (+activityDate === +yesterday) return "Yesterday";
-    return d.toLocaleDateString("en-US", {
+    const activityYear = date.getFullYear();
+    const activityMonth = date.getMonth();
+    const activityDay = date.getDate();
+
+    const now = Date.now();
+    const currentDate = new Date(now);
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const currentDay = currentDate.getDate();
+
+    // Calculate timestamps for comparison (midnight of each day)
+    const activityTimestamp = Date.UTC(
+      activityYear,
+      activityMonth,
+      activityDay,
+    );
+    const todayTimestamp = Date.UTC(currentYear, currentMonth, currentDay);
+    const yesterdayTimestamp = todayTimestamp - 86400000; // 24 hours in ms
+
+    if (activityTimestamp === todayTimestamp) return "Today";
+    if (activityTimestamp === yesterdayTimestamp) return "Yesterday";
+
+    return date.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
-      year: d.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+      year: activityYear !== currentYear ? "numeric" : undefined,
     });
   };
 
@@ -171,12 +184,15 @@
   };
 
   const groupedActivities = $derived.by(() => {
-    const groups = new Map<string, Activity[]>();
+    const groups: Record<string, Activity[]> = {};
     for (const activity of activities) {
       const key = getDateKey(activity.createdAt);
-      groups.set(key, [...(groups.get(key) ?? []), activity]);
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(activity);
     }
-    return Array.from(groups.entries());
+    return Object.entries(groups);
   });
 </script>
 
