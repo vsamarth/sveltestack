@@ -15,6 +15,10 @@ import {
 import { createMockRequestEvent } from "../../../tests/helpers/mock-request";
 import { getFileById } from "$lib/server/db/file";
 import { setupAllMocks } from "../../../tests/helpers/mocks";
+import {
+  findActivity,
+  expectActivity,
+} from "../../../tests/helpers/activity-helpers";
 
 // Mock $app/server
 const mockGetRequestEvent = vi.fn();
@@ -65,6 +69,28 @@ describe("file integration tests", () => {
       // Verify file was deleted (soft delete)
       const deletedFile = await getFileById(file.id);
       expect(deletedFile?.deletedAt).toBeDefined();
+    });
+
+    it("should log file.deleted activity", async () => {
+      const workspace = await createTestWorkspace({
+        name: "Test Workspace",
+        ownerId: testUser1.id,
+      });
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "test.txt",
+        status: "completed",
+      });
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await deleteFile(file.id);
+      const activity = await findActivity(workspace.id, "file.deleted");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "file.deleted",
+        entityType: "file",
+        entityId: file.id,
+        metadataFields: ["filename"],
+      });
     });
 
     it("should return 401 when user is not authenticated", async () => {
@@ -175,6 +201,28 @@ describe("file integration tests", () => {
       // Verify file was renamed
       const renamedFile = await getFileById(file.id);
       expect(renamedFile?.filename).toBe("new-name.txt");
+    });
+
+    it("should log file.renamed activity", async () => {
+      const workspace = await createTestWorkspace({
+        name: "Test Workspace",
+        ownerId: testUser1.id,
+      });
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "old-name.txt",
+        status: "completed",
+      });
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await renameFile({ fileId: file.id, newFilename: "new-name.txt" });
+      const activity = await findActivity(workspace.id, "file.renamed");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "file.renamed",
+        entityType: "file",
+        entityId: file.id,
+        metadataFields: ["oldFilename", "newFilename"],
+      });
     });
 
     it("should return 401 when user is not authenticated", async () => {
@@ -436,6 +484,29 @@ describe("file integration tests", () => {
       expect(result.filename).toBe("test.txt");
       expect(result.contentType).toBe("text/plain");
       expect(result.size).toBeDefined();
+    });
+
+    it("should log file.downloaded activity", async () => {
+      const workspace = await createTestWorkspace({
+        name: "Test Workspace",
+        ownerId: testUser1.id,
+      });
+      const file = await createTestFile({
+        workspaceId: workspace.id,
+        filename: "test.txt",
+        status: "completed",
+        contentType: "text/plain",
+      });
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await getFileDownloadUrl(file.id);
+      const activity = await findActivity(workspace.id, "file.downloaded");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "file.downloaded",
+        entityType: "file",
+        entityId: file.id,
+        metadataFields: ["filename"],
+      });
     });
 
     it("should return 401 when user is not authenticated", async () => {

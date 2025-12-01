@@ -94,7 +94,9 @@ export const deleteWorkspace = command(z.string(), async (workspaceId) => {
       );
     }
 
-    const remainingWorkspaces = userWorkspaces.filter((w) => w.id !== workspaceId);
+    const remainingWorkspaces = userWorkspaces.filter(
+      (w) => w.id !== workspaceId,
+    );
 
     // Log workspace deletion before actually deleting it
     await logWorkspaceDeleted(workspaceId, locals.user.id);

@@ -13,6 +13,11 @@ import {
 } from "../../../tests/helpers/test-db";
 import { createMockRequestEvent } from "../../../tests/helpers/mock-request";
 import { getWorkspaces, getWorkspaceById } from "$lib/server/db/workspace";
+import * as activityDb from "$lib/server/db/activity";
+import {
+  findActivity,
+  expectActivity,
+} from "../../../tests/helpers/activity-helpers";
 
 // Mock $app/server
 const mockGetRequestEvent = vi.fn();
@@ -73,6 +78,18 @@ describe("workspace integration tests", () => {
       expect(workspaces).toHaveLength(1);
       expect(workspaces[0].name).toBe("My Workspace");
     });
+
+    it("should log workspace.created activity", async () => {
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      const result = await createWorkspace("My Workspace");
+      const activity = await findActivity(result.id, "workspace.created");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "workspace.created",
+        entityType: "workspace",
+        entityId: result.id,
+      });
+    });
   });
 
   describe("updateWorkspace", () => {
@@ -90,6 +107,23 @@ describe("workspace integration tests", () => {
 
       const updated = await getWorkspaceById(workspace.id);
       expect(updated?.name).toBe("Updated Name");
+    });
+
+    it("should log workspace.renamed activity", async () => {
+      const workspace = await createTestWorkspaceHelper("Original Name");
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await updateWorkspace({
+        workspaceId: workspace.id,
+        name: "Updated Name",
+      });
+      const activity = await findActivity(workspace.id, "workspace.renamed");
+      expectActivity(activity, {
+        actorId: testUser1.id,
+        eventType: "workspace.renamed",
+        entityType: "workspace",
+        entityId: workspace.id,
+        metadataFields: ["oldName", "newName"],
+      });
     });
 
     it("should return 403 when user is not owner", async () => {
@@ -130,6 +164,15 @@ describe("workspace integration tests", () => {
       expect(result.redirectTo).toBe(`/dashboard/workspace/${ws2.id}`);
       expect(await getWorkspaceById(ws1.id)).toBeUndefined();
       expect(await getWorkspaceById(ws2.id)).toBeDefined();
+    });
+
+    it("should log workspace.deleted activity", async () => {
+      const ws1 = await createTestWorkspaceHelper("Workspace 1");
+      await createTestWorkspaceHelper("Workspace 2");
+      const logSpy = vi.spyOn(activityDb, "logWorkspaceDeleted");
+      mockGetRequestEvent.mockReturnValue(createMockRequestEvent(testUser1));
+      await deleteWorkspace(ws1.id);
+      expect(logSpy).toHaveBeenCalledWith(ws1.id, testUser1.id);
     });
 
     it("should return 400 when trying to delete last workspace", async () => {

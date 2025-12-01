@@ -53,7 +53,9 @@ test.describe("File operations", () => {
     const row = fileRow(page, "project-plan.pdf");
     await row.getByRole("button", { name: "Actions" }).click();
 
-    await expect(page.getByRole("menuitem", { name: "Download" })).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Download" }),
+    ).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("menuitem", { name: "Download" }).click();
