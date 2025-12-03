@@ -180,4 +180,3 @@ SvelteStack is built with amazing open-source tools:
 - [Uppy](https://uppy.io/) - File upload library
 - [Vitest](https://vitest.dev/) - Testing framework
 - [Playwright](https://playwright.dev/) - E2E testing
-
