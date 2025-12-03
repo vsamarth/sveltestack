@@ -1,7 +1,7 @@
 import { db } from "./index";
 import { file, workspace } from "./schema";
-import { eq, and, isNull } from "drizzle-orm";
-import { logFileUploaded, logFileDeleted, logFileRenamed } from "./activity";
+import { eq, and, isNull, sql } from "drizzle-orm";
+import * as events from "../events";
 
 export async function createPendingFile(
   workspaceId: string,
@@ -9,6 +9,7 @@ export async function createPendingFile(
   storageKey: string,
   size: number,
   contentType: string,
+  dropTimestamp?: number,
 ) {
   const [newFile] = await db
     .insert(file)
@@ -19,6 +20,7 @@ export async function createPendingFile(
       size: size.toString(),
       contentType,
       status: "pending",
+      dropTimestamp: dropTimestamp || null,
     })
     .returning();
   return newFile;
@@ -37,7 +39,7 @@ export async function confirmFileUpload(fileId: string, actorId: string) {
     .returning();
 
   // Log activity
-  await logFileUploaded(
+  await events.onFileUploaded(
     fileData.workspaceId,
     actorId,
     fileId,
@@ -74,7 +76,9 @@ export async function getWorkspaceFiles(
     .select()
     .from(file)
     .where(and(...conditions))
-    .orderBy(file.createdAt);
+    .orderBy(
+      sql`COALESCE(${file.dropTimestamp}, EXTRACT(EPOCH FROM ${file.createdAt}) * 1000)`,
+    );
 }
 
 export async function getFileById(fileId: string) {
@@ -94,7 +98,7 @@ export async function deleteFile(fileId: string, actorId: string) {
     .where(eq(file.id, fileId))
     .returning();
 
-  await logFileDeleted(
+  await events.onFileDeleted(
     fileData.workspaceId,
     actorId,
     fileId,
@@ -122,7 +126,7 @@ export async function renameFile(
     .where(eq(file.id, fileId))
     .returning();
 
-  await logFileRenamed(
+  await events.onFileRenamed(
     fileData.workspaceId,
     actorId,
     fileId,

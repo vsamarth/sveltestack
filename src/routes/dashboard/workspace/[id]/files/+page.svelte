@@ -3,7 +3,6 @@
   import { UppyContextProvider } from "@uppy/svelte";
   import AwsS3 from "@uppy/aws-s3";
   import type { PageData } from "./$types";
-  import type { File } from "$lib/server/db/schema";
   import * as Dialog from "$lib/components/ui/dialog";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
@@ -21,13 +20,29 @@
     getFilePreviewUrl,
     getFileDownloadUrl,
   } from "$lib/remote/actions.remote";
+  import {
+    FileManager,
+    type StoredFile,
+  } from "$lib/components/file-manager.svelte";
 
   let { data }: { data: PageData } = $props();
 
-  type StoredFile = Pick<
-    File,
-    "id" | "filename" | "size" | "contentType" | "createdAt"
-  >;
+  // Centralized state manager for file operations
+  const fileManager = new FileManager(data.files);
+
+  // Keep manager in sync with server data
+  $effect(() => {
+    fileManager.setFiles(data.files);
+  });
+
+  // Reset optimistic state when workspace changes
+  $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _ = data.workspace.id;
+    return () => {
+      fileManager.clearState();
+    };
+  });
 
   function createUppyInstance() {
     const instance = new Uppy({
@@ -40,27 +55,22 @@
       shouldUseMultipart: false,
       async getUploadParameters(file) {
         try {
+          const dropTimestamp = Date.now();
+
           const responseData = await getPresignedUploadUrlRemote({
             filename: file.name,
             contentType: file.type,
             workspaceId: data.workspace.id,
             size: typeof file.size === "number" ? file.size : undefined,
+            dropTimestamp,
           });
 
-          // Store fileId for confirmation
           file.meta.fileId = responseData.fileId;
 
-          console.log(
-            "Upload parameters received for file:",
-            file.name,
-            responseData,
-          );
-          // Ensure the returned object matches AwsS3UploadParameters
           return {
             method: "PUT",
             url: responseData.url,
             headers: responseData.headers,
-            // 'fields' and 'expires' are optional, not needed for simple PUT
           };
         } catch (error) {
           console.error("Failed to get upload URL:", error);
@@ -69,15 +79,35 @@
       },
     });
 
-    // Setup event listeners
+    instance.on("file-added", (file) => {
+      fileManager.addUpload({
+        id: file.id,
+        filename: file.name || "Unknown file",
+        size: typeof file.size === "number" ? file.size : 0,
+        contentType: file.type || null,
+        progress: 0,
+        status: "uploading",
+      });
+    });
+
+    instance.on("upload-progress", (file, progress) => {
+      if (file && progress.bytesTotal) {
+        const percentage = (progress.bytesUploaded / progress.bytesTotal) * 100;
+        fileManager.updateUpload(file.id, { progress: percentage });
+      }
+    });
 
     instance.on("upload-success", async (file) => {
       if (file && file.meta.fileId && typeof file.meta.fileId === "string") {
         try {
-          // Confirm upload in database
           await confirmUpload({
             fileId: file.meta.fileId,
           });
+
+          fileManager.updateUpload(file.id, {
+            serverFileId: file.meta.fileId as string,
+          });
+
           await invalidateAll();
 
           toast.success("File uploaded", {
@@ -85,17 +115,29 @@
           });
         } catch (error) {
           console.error("Failed to confirm upload:", error);
+          fileManager.updateUpload(file.id, {
+            status: "error",
+            error: "Failed to confirm upload",
+          });
           toast.error("Failed to confirm upload");
         }
       }
     });
 
-    instance.on("upload-error", (file) => {
+    instance.on("upload-error", (file, error) => {
       if (file) {
+        fileManager.updateUpload(file.id, {
+          status: "error",
+          error: error?.message || "Upload failed",
+        });
         toast.error("Upload failed", {
           description: file.name,
         });
       }
+    });
+
+    instance.on("file-removed", (file) => {
+      fileManager.removeUpload(file.id);
     });
 
     instance.on("restriction-failed", (file, error) => {
@@ -108,25 +150,31 @@
   }
 
   let uppy = $state.raw(createUppyInstance());
-  let storedFiles = $derived(data.files);
-  let isDialogOpen = $state(false);
-  let selectedImage = $state<{ url: string; filename: string } | null>(null);
-
   let inputElement = $state<HTMLInputElement | null>(null);
 
-  // Check if file is an image
+  function handleCancelUpload(fileId: string) {
+    uppy.removeFile(fileId);
+  }
+
+  function handleRetryUpload(fileId: string) {
+    uppy.retryUpload(fileId);
+    fileManager.updateUpload(fileId, {
+      status: "uploading",
+      progress: 0,
+      error: undefined,
+    });
+  }
+
   function isImageFile(contentType: string | null): boolean {
     if (!contentType) return false;
     return contentType.startsWith("image/");
   }
 
-  // Check if file is a PDF
   function isPdfFile(contentType: string | null): boolean {
     if (!contentType) return false;
     return contentType === "application/pdf";
   }
 
-  // Handle file click (for image preview or PDF opening)
   async function handleFileClick(file: StoredFile) {
     const isImage = isImageFile(file.contentType);
     const isPdf = isPdfFile(file.contentType);
@@ -137,24 +185,18 @@
       const { url } = await getFilePreviewUrl(file.id);
 
       if (isPdf) {
-        // Open PDF in new tab
         window.open(url, "_blank");
       } else if (isImage) {
-        // Show image in dialog
-        selectedImage = { url, filename: file.filename };
-        isDialogOpen = true;
+        fileManager.promptPreview(file.id, file.filename, url);
       }
     } catch (error) {
       console.error("Failed to load file preview:", error);
     }
   }
 
-  // Download file
   async function handleDownloadFile(fileId: string, filename: string) {
     try {
       const { url } = await getFileDownloadUrl(fileId);
-
-      // Create a temporary link and trigger download
       const link = document.createElement("a");
       link.href = url;
       link.download = filename;
@@ -166,73 +208,47 @@
     }
   }
 
-  let deleteDialogOpen = $state(false);
-  let fileToDelete = $state<{ id: string; name: string } | null>(null);
-
-  let renameDialogOpen = $state(false);
-  let fileToRename = $state<{ id: string; name: string } | null>(null);
-  let newFilename = $state("");
-
-  // Open delete confirmation dialog
-  function openDeleteDialog(fileId: string, filename: string) {
-    fileToDelete = { id: fileId, name: filename };
-    deleteDialogOpen = true;
-  }
-
-  // Delete file after confirmation
   async function confirmDeleteFile() {
-    if (!fileToDelete) return;
+    if (fileManager.dialogState.type !== "delete") return;
+
+    const fileName = fileManager.dialogState.filename;
 
     try {
-      await deleteFile(fileToDelete.id);
-      await invalidateAll();
-      toast.success("File deleted", {
-        description: fileToDelete.name,
+      await fileManager.executeDelete(async (fileId) => {
+        await deleteFile(fileId);
+        await invalidateAll();
+        toast.success("File deleted", { description: fileName });
       });
-      deleteDialogOpen = false;
-      fileToDelete = null;
     } catch (error) {
       console.error("Failed to delete file:", error);
       toast.error("Failed to delete file");
     }
   }
 
-  // Open rename dialog
-  function openRenameDialog(fileId: string, currentName: string) {
-    fileToRename = { id: fileId, name: currentName };
-    newFilename = currentName;
-    renameDialogOpen = true;
-  }
-
-  // Rename file after confirmation
   async function confirmRenameFile() {
-    if (!fileToRename || !newFilename.trim()) return;
+    if (fileManager.dialogState.type !== "rename") return;
+
+    const oldName = fileManager.dialogState.filename;
+    const targetName = fileManager.dialogState.newName.trim();
 
     try {
-      await renameFile({
-        fileId: fileToRename.id,
-        newFilename: newFilename.trim(),
+      await fileManager.executeRename(async ({ fileId, newName }) => {
+        await renameFile({ fileId, newFilename: newName });
+        await invalidateAll();
+        toast.success("File renamed", {
+          description: `"${oldName}" → "${targetName}"`,
+        });
       });
-      await invalidateAll();
-      toast.success("File renamed", {
-        description: `"${fileToRename.name}" → "${newFilename.trim()}"`,
-      });
-      renameDialogOpen = false;
-      fileToRename = null;
-      newFilename = "";
     } catch (error) {
       console.error("Failed to rename file:", error);
       toast.error("Failed to rename file");
     }
   }
 
-  // Cleanup on workspace change or component unmount
   $effect(() => {
     return () => {
       uppy.cancelAll();
       uppy.clear();
-      const allFiles = uppy.getFiles();
-      allFiles.forEach((file) => uppy.removeFile(file.id));
     };
   });
 </script>
@@ -251,7 +267,6 @@
     <UppyContextProvider {uppy}>
       <DropzoneWrapper>
         <div class="w-full max-w-6xl mx-auto">
-          <!-- Hidden file input -->
           <input
             bind:this={inputElement}
             type="file"
@@ -273,30 +288,39 @@
 
           <!-- Files table -->
           <FileTable
-            files={storedFiles}
-            onDelete={openDeleteDialog}
+            files={fileManager.allFiles}
+            onDelete={(id, name) => fileManager.promptDelete(id, name)}
             onDownload={handleDownloadFile}
             onPreview={handleFileClick}
-            onRename={openRenameDialog}
+            onRename={(id, name) => fileManager.promptRename(id, name)}
+            onCancelUpload={handleCancelUpload}
+            onRetryUpload={handleRetryUpload}
           />
         </div>
       </DropzoneWrapper>
     </UppyContextProvider>
 
     <!-- Image Preview Dialog -->
-    <Dialog.Root bind:open={isDialogOpen}>
+    <Dialog.Root
+      open={fileManager.dialogState.type === "preview"}
+      onOpenChange={(open) => !open && fileManager.closeDialog()}
+    >
       <Dialog.Content class="max-w-4xl max-h-[90vh] p-0">
         <Dialog.Header class="p-6 pb-4">
           <Dialog.Title class="text-xl font-semibold">
-            {selectedImage?.filename || "Image Preview"}
+            {#if fileManager.dialogState.type === "preview"}
+              {fileManager.dialogState.filename}
+            {:else}
+              Image Preview
+            {/if}
           </Dialog.Title>
         </Dialog.Header>
 
-        {#if selectedImage}
+        {#if fileManager.dialogState.type === "preview"}
           <div class="relative w-full overflow-auto px-6 pb-6">
             <img
-              src={selectedImage.url}
-              alt={selectedImage.filename}
+              src={fileManager.dialogState.url}
+              alt={fileManager.dialogState.filename}
               class="w-full h-auto rounded-md"
               style="max-height: calc(90vh - 120px); object-fit: contain;"
             />
@@ -313,24 +337,24 @@
     </Dialog.Root>
 
     <!-- Delete File Confirmation Dialog -->
-    <Dialog.Root bind:open={deleteDialogOpen}>
+    <Dialog.Root
+      open={fileManager.dialogState.type === "delete"}
+      onOpenChange={(open) => !open && fileManager.closeDialog()}
+    >
       <Dialog.Content class="sm:max-w-md">
         <Dialog.Header>
           <Dialog.Title>Delete File</Dialog.Title>
           <Dialog.Description>
             Are you sure you want to delete
-            <span class="font-semibold">{fileToDelete?.name}</span>? This action
-            cannot be undone.
+            <span class="font-semibold">
+              {#if fileManager.dialogState.type === "delete"}
+                {fileManager.dialogState.filename}
+              {/if}
+            </span>? This action cannot be undone.
           </Dialog.Description>
         </Dialog.Header>
         <Dialog.Footer class="gap-2">
-          <Button
-            variant="outline"
-            onclick={() => {
-              deleteDialogOpen = false;
-              fileToDelete = null;
-            }}
-          >
+          <Button variant="outline" onclick={() => fileManager.closeDialog()}>
             Cancel
           </Button>
           <Button variant="destructive" onclick={confirmDeleteFile}>
@@ -341,20 +365,31 @@
     </Dialog.Root>
 
     <!-- Rename File Dialog -->
-    <Dialog.Root bind:open={renameDialogOpen}>
+    <Dialog.Root
+      open={fileManager.dialogState.type === "rename"}
+      onOpenChange={(open) => !open && fileManager.closeDialog()}
+    >
       <Dialog.Content class="sm:max-w-md">
         <Dialog.Header>
           <Dialog.Title>Rename File</Dialog.Title>
           <Dialog.Description>
             Enter a new name for
-            <span class="font-semibold">{fileToRename?.name}</span>
+            <span class="font-semibold">
+              {#if fileManager.dialogState.type === "rename"}
+                {fileManager.dialogState.filename}
+              {/if}
+            </span>
           </Dialog.Description>
         </Dialog.Header>
         <div class="py-4">
           <Input
-            bind:value={newFilename}
+            value={fileManager.dialogState.type === "rename"
+              ? fileManager.dialogState.newName
+              : ""}
             placeholder="Enter new filename"
             class="w-full"
+            oninput={(e) =>
+              fileManager.updateRenameInput(e.currentTarget.value)}
             onkeydown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -364,20 +399,15 @@
           />
         </div>
         <Dialog.Footer class="gap-2">
-          <Button
-            variant="outline"
-            onclick={() => {
-              renameDialogOpen = false;
-              fileToRename = null;
-              newFilename = "";
-            }}
-          >
+          <Button variant="outline" onclick={() => fileManager.closeDialog()}>
             Cancel
           </Button>
           <Button
             onclick={confirmRenameFile}
-            disabled={!newFilename.trim() ||
-              newFilename.trim() === fileToRename?.name}
+            disabled={fileManager.dialogState.type === "rename" &&
+              (!fileManager.dialogState.newName.trim() ||
+                fileManager.dialogState.newName.trim() ===
+                  fileManager.dialogState.filename)}
           >
             Rename
           </Button>

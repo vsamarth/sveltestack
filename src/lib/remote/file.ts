@@ -12,7 +12,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { S3Client } from "@aws-sdk/client-s3";
 import { env } from "$lib/server/env";
 import { getPresignedDownloadUrl } from "$lib/server/storage";
-import { logFileDownloaded } from "$lib/server/db/activity";
+import * as events from "$lib/server/events";
 
 const s3Client = new S3Client({
   endpoint: env.STORAGE_ENDPOINT,
@@ -196,7 +196,7 @@ export const getFileDownloadUrl = command(z.string(), async (fileId) => {
     );
 
     // Log activity
-    await logFileDownloaded(
+    await events.onFileDownloaded(
       file.workspaceId,
       locals.user.id,
       fileId,

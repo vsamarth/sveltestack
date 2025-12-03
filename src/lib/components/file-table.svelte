@@ -17,16 +17,15 @@
     MoreHorizontal,
     Pencil,
     Upload,
+    X,
+    Loader2,
+    CircleAlert,
+    RotateCcw,
   } from "@lucide/svelte";
   import prettyBytes from "pretty-bytes";
-  import type { File } from "$lib/server/db/schema";
   import { useFileInput } from "@uppy/svelte";
   import FilesEmptyState from "$lib/components/files-empty-state.svelte";
-
-  type StoredFile = Pick<
-    File,
-    "id" | "filename" | "size" | "contentType" | "createdAt"
-  >;
+  import type { FileViewModel, StoredFile } from "./file-manager.svelte";
 
   let {
     files,
@@ -34,17 +33,23 @@
     onDownload,
     onPreview,
     onRename,
+    onCancelUpload,
+    onRetryUpload,
     disabled = false,
     disabledMessage,
   }: {
-    files: StoredFile[];
+    files: FileViewModel[];
     onDelete: (id: string, name: string) => void;
     onDownload: (id: string, name: string) => void;
     onPreview: (file: StoredFile) => void;
     onRename: (id: string, currentName: string) => void;
+    onCancelUpload?: (id: string) => void;
+    onRetryUpload?: (id: string) => void;
     disabled?: boolean;
     disabledMessage?: string;
   } = $props();
+
+  const hasContent = $derived(files.length > 0);
 
   function getFileIcon(contentType: string | null) {
     if (!contentType) return FileIcon;
@@ -116,7 +121,7 @@
     </Button>
   </div>
 
-  {#if files.length === 0}
+  {#if !hasContent}
     <!-- Empty State -->
     <FilesEmptyState {disabled} {disabledMessage} />
   {:else}
@@ -145,95 +150,162 @@
         </Table.Header>
         <Table.Body>
           {#each files as file (file.id)}
-            {@const Icon = getFileIcon(file.contentType)}
-            {@const canPreview = isPreviewable(file.contentType)}
-            <Table.Row class="group hover:bg-muted/40 border-b last:border-b-0">
+            {@const Icon = getFileIcon(file.type)}
+            {@const canPreview = isPreviewable(file.type)}
+            {@const isDeleting = file.status === "deleting"}
+            {@const isRenaming = file.status === "renaming"}
+            {@const isUploading = file.status === "uploading"}
+            {@const isError = file.status === "error"}
+            {@const isBusy = isDeleting || isRenaming || isUploading || isError}
+
+            <Table.Row
+              class="group border-b last:border-b-0 transition-all duration-200 
+                {isDeleting ? 'opacity-50 bg-destructive/5' : ''}
+                {isRenaming ? 'bg-muted/20' : ''}
+                {isError ? 'bg-destructive/5' : ''}
+                {!isBusy ? 'hover:bg-muted/40' : ''}"
+            >
               <Table.Cell class="py-3 pl-4 w-12">
-                <Icon class="h-4 w-4 text-muted-foreground shrink-0" />
+                {#if isDeleting || isRenaming || isUploading}
+                  <Loader2
+                    class="h-4 w-4 shrink-0 animate-spin {isDeleting
+                      ? 'text-destructive'
+                      : 'text-primary'}"
+                  />
+                {:else if isError}
+                  <CircleAlert class="h-4 w-4 text-destructive shrink-0" />
+                {:else}
+                  <Icon class="h-4 w-4 text-muted-foreground shrink-0" />
+                {/if}
               </Table.Cell>
+
               <Table.Cell class="py-3 min-w-0 whitespace-normal">
                 <span
-                  class="text-sm font-normal text-foreground truncate block"
+                  class="text-sm font-normal truncate block
+                    {isDeleting ? 'text-muted-foreground line-through' : ''}
+                    {isError ? 'text-destructive' : 'text-foreground'}"
                 >
-                  {file.filename}
+                  {file.name}
                 </span>
               </Table.Cell>
+
               <Table.Cell class="py-3 w-32">
-                <Badge variant="secondary" class="text-xs tracking-wide">
-                  {getFileTypeLabel(file.contentType)}
+                <Badge
+                  variant={isDeleting || isError ? "destructive" : "secondary"}
+                  class="text-xs tracking-wide"
+                >
+                  {#if isDeleting}
+                    Deleting
+                  {:else if isRenaming}
+                    Renaming
+                  {:else if isUploading}
+                    Uploading
+                  {:else if isError}
+                    Failed
+                  {:else}
+                    {getFileTypeLabel(file.type)}
+                  {/if}
                 </Badge>
               </Table.Cell>
+
               <Table.Cell class="py-3 w-28">
                 <span
                   class="text-sm text-muted-foreground font-mono whitespace-nowrap"
                 >
-                  {prettyBytes(parseInt(file.size || "0"))}
+                  {#if isUploading && !isError}
+                    {Math.round(file.progress || 0)}%
+                  {:else}
+                    {prettyBytes(file.size)}
+                  {/if}
                 </span>
               </Table.Cell>
+
               <Table.Cell class="py-3 pr-4 text-right w-24">
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger>
-                    {#snippet child({ props })}
-                      <Button
-                        {...props}
-                        variant="ghost"
-                        size="icon"
-                        class="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onclick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <MoreHorizontal class="h-4 w-4" />
-                        <span class="sr-only">Actions</span>
-                      </Button>
-                    {/snippet}
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content align="end" class="w-40">
-                    {#if canPreview}
+                {#if isError && onRetryUpload}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onclick={() => onRetryUpload(file.id)}
+                  >
+                    <RotateCcw class="h-4 w-4" />
+                    <span class="sr-only">Retry upload</span>
+                  </Button>
+                {:else if isUploading && onCancelUpload}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onclick={() => onCancelUpload(file.id)}
+                  >
+                    <X class="h-4 w-4" />
+                    <span class="sr-only">Cancel upload</span>
+                  </Button>
+                {:else if !isBusy}
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      {#snippet child({ props })}
+                        <Button
+                          {...props}
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onclick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <MoreHorizontal class="h-4 w-4" />
+                          <span class="sr-only">Actions</span>
+                        </Button>
+                      {/snippet}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end" class="w-40">
+                      {#if canPreview && file.original}
+                        <DropdownMenu.Item
+                          onclick={(e) => {
+                            e.stopPropagation();
+                            if (file.original) onPreview(file.original);
+                          }}
+                          class="cursor-pointer text-sm"
+                        >
+                          <Eye class="mr-2 h-4 w-4" />
+                          <span>Preview</span>
+                        </DropdownMenu.Item>
+                      {/if}
                       <DropdownMenu.Item
                         onclick={(e) => {
                           e.stopPropagation();
-                          onPreview(file);
+                          onDownload(file.id, file.name);
                         }}
                         class="cursor-pointer text-sm"
                       >
-                        <Eye class="mr-2 h-4 w-4" />
-                        <span>Preview</span>
+                        <Download class="mr-2 h-4 w-4" />
+                        <span>Download</span>
                       </DropdownMenu.Item>
-                    {/if}
-                    <DropdownMenu.Item
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onDownload(file.id, file.filename);
-                      }}
-                      class="cursor-pointer text-sm"
-                    >
-                      <Download class="mr-2 h-4 w-4" />
-                      <span>Download</span>
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onRename(file.id, file.filename);
-                      }}
-                      class="cursor-pointer text-sm"
-                    >
-                      <Pencil class="mr-2 h-4 w-4" />
-                      <span>Rename</span>
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        onDelete(file.id, file.filename);
-                      }}
-                      class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
-                    >
-                      <Trash2 class="mr-2 h-4 w-4 text-destructive" />
-                      <span>Delete</span>
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
+                      <DropdownMenu.Item
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          onRename(file.id, file.name);
+                        }}
+                        class="cursor-pointer text-sm"
+                      >
+                        <Pencil class="mr-2 h-4 w-4" />
+                        <span>Rename</span>
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Separator />
+                      <DropdownMenu.Item
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          onDelete(file.id, file.name);
+                        }}
+                        class="cursor-pointer text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <Trash2 class="mr-2 h-4 w-4 text-destructive" />
+                        <span>Delete</span>
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                {/if}
               </Table.Cell>
             </Table.Row>
           {/each}

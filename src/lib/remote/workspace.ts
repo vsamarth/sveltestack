@@ -11,7 +11,7 @@ import {
   getWorkspaceById,
 } from "$lib/server/db/workspace";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
-import { logWorkspaceDeleted } from "$lib/server/db/activity";
+import * as events from "$lib/server/events";
 
 export const createWorkspace = command(z.string(), async (name) => {
   const { locals } = getRequestEvent();
@@ -99,7 +99,7 @@ export const deleteWorkspace = command(z.string(), async (workspaceId) => {
     );
 
     // Log workspace deletion before actually deleting it
-    await logWorkspaceDeleted(workspaceId, locals.user.id);
+    await events.onWorkspaceDeleted(workspaceId, locals.user.id);
 
     await deleteWorkspaceDb(workspaceId);
 

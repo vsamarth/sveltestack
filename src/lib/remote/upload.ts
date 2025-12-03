@@ -17,8 +17,9 @@ export const getPresignedUploadUrlRemote = command(
     contentType: z.string().optional(),
     workspaceId: z.string(),
     size: z.number().optional(),
+    dropTimestamp: z.number().optional(),
   }),
-  async ({ filename, contentType, workspaceId, size }) => {
+  async ({ filename, contentType, workspaceId, size, dropTimestamp }) => {
     const { locals } = getRequestEvent();
     if (!locals.user) {
       error(401, "Unauthorized");
@@ -48,6 +49,7 @@ export const getPresignedUploadUrlRemote = command(
       storageKey,
       size || 0,
       finalContentType,
+      dropTimestamp,
     );
 
     // Generate presigned URL (valid for 1 hour)

@@ -34,3 +34,4 @@ vite.config.ts.timestamp-*
 
 # React Email
 .react-email
+.env*.local

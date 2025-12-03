@@ -8,12 +8,7 @@ import {
   type WorkspaceInvite,
 } from "./schema";
 import { randomBytes, createHash } from "node:crypto";
-import {
-  logInviteSent,
-  logInviteAccepted,
-  logInviteCancelled,
-  logMemberAdded,
-} from "./activity";
+import * as events from "../events";
 
 function generateInviteToken(): string {
   return randomBytes(32).toString("base64url");
@@ -103,7 +98,13 @@ export async function createInvite(
     })
     .returning();
 
-  await logInviteSent(workspaceId, invitedBy, invite.id, normalizedEmail, role);
+  await events.onInviteSent(
+    workspaceId,
+    invitedBy,
+    invite.id,
+    normalizedEmail,
+    role,
+  );
 
   return { ...invite, token };
 }
@@ -215,7 +216,12 @@ export async function acceptInvite(
     .where(eq(workspaceInvite.id, invite.id));
 
   // Log invite accepted
-  await logInviteAccepted(invite.workspaceId, userId, invite.id, invite.email);
+  await events.onInviteAccepted(
+    invite.workspaceId,
+    userId,
+    invite.id,
+    invite.email,
+  );
 
   if (existingMember.length > 0) {
     // User is already a member, don't log member.added
@@ -242,7 +248,7 @@ export async function acceptInvite(
 
   // Log member added (only if new membership was created)
   if (userData) {
-    await logMemberAdded(
+    await events.onMemberAdded(
       invite.workspaceId,
       userId,
       membership[0].id,
@@ -289,7 +295,12 @@ export async function cancelInvite(inviteId: string, actorId: string) {
     .where(eq(workspaceInvite.id, inviteId))
     .returning();
 
-  await logInviteCancelled(invite.workspaceId, actorId, inviteId, invite.email);
+  await events.onInviteCancelled(
+    invite.workspaceId,
+    actorId,
+    inviteId,
+    invite.email,
+  );
 
   return result[0];
 }
