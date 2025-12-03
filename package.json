@@ -22,6 +22,7 @@
     "lint": "prettier --check . && eslint .",
     "prepare": "husky",
     "preview": "vite preview",
+    "setup": "tsx scripts/setup.ts",
     "test": "npm run test:unit && npm run test:e2e",
     "test:coverage": "vitest --run --coverage",
     "test:e2e": "playwright test",
