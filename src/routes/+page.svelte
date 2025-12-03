@@ -14,6 +14,15 @@
     Lock,
   } from "@lucide/svelte";
   import { siteConfig } from "$lib/config";
+
+  const builtWith = [
+    { name: "SvelteKit", description: "Svelte 5" },
+    { name: "Drizzle ORM", description: "Type-safe SQL" },
+    { name: "PostgreSQL", description: "Database" },
+    { name: "better-auth", description: "Authentication" },
+    { name: "Resend", description: "Email" },
+    { name: "Tailwind CSS", description: "Styling" },
+  ];
 </script>
 
 <svelte:head>
@@ -34,9 +43,7 @@
 </svelte:head>
 
 <main class="min-h-screen">
-  <!-- Hero Section with integrated header -->
   <section class="gradient-hero">
-    <!-- Transparent Header -->
     <header class="container mx-auto px-4 py-6 max-w-7xl">
       <div class="flex items-center gap-2">
         <div
@@ -48,7 +55,6 @@
       </div>
     </header>
 
-    <!-- Hero Content -->
     <div class="py-20 md:py-28">
       <div
         class="container mx-auto px-4 flex flex-col items-center text-center max-w-4xl"
@@ -120,7 +126,6 @@
     </div>
   </section>
 
-  <!-- Core Building Blocks Section -->
   <section class="py-24 container mx-auto px-4 max-w-7xl">
     <div class="text-center mb-16">
       <h2
@@ -135,7 +140,6 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Authentication -->
       <div
         class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
       >
@@ -151,7 +155,6 @@
         </p>
       </div>
 
-      <!-- Workspaces / Organizations -->
       <div
         class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
       >
@@ -166,7 +169,6 @@
         </p>
       </div>
 
-      <!-- Members & Invites -->
       <div
         class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
       >
@@ -181,7 +183,6 @@
         </p>
       </div>
 
-      <!-- Activity Logs -->
       <div
         class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
       >
@@ -196,7 +197,6 @@
         </p>
       </div>
 
-      <!-- Transactional Emails -->
       <div
         class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
       >
@@ -211,7 +211,6 @@
         </p>
       </div>
 
-      <!-- Thorough Tests -->
       <div
         class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
       >
@@ -228,10 +227,8 @@
     </div>
   </section>
 
-  <!-- Get Started / Built With -->
   <section class="py-24 container mx-auto px-4 max-w-6xl">
     <div class="grid md:grid-cols-2 gap-12 items-start">
-      <!-- Get Started -->
       <div>
         <h2
           class="text-2xl md:text-3xl font-display font-bold mb-6 tracking-normal"
@@ -241,7 +238,6 @@
         <div
           class="rounded-xl bg-[#1e1e1e] text-white overflow-hidden shadow-xl"
         >
-          <!-- Terminal header -->
           <div
             class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#3d3d3d]"
           >
@@ -252,7 +248,6 @@
             </div>
             <span class="text-xs text-[#8b8b8b] ml-2 font-mono">terminal</span>
           </div>
-          <!-- Terminal content -->
           <div class="p-4 font-mono text-sm leading-relaxed">
             <div class="flex">
               <span class="text-[#7ee787] select-none">$</span>
@@ -278,7 +273,6 @@
         </p>
       </div>
 
-      <!-- Built With -->
       <div>
         <h2
           class="text-2xl md:text-3xl font-display font-bold mb-6 tracking-normal"
@@ -286,59 +280,19 @@
           Built With
         </h2>
         <div class="grid grid-cols-2 gap-3">
-          <!-- SvelteKit -->
-          <div
-            class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-          >
-            <p class="font-medium text-sm">SvelteKit</p>
-            <p class="text-xs text-muted-foreground">Svelte 5</p>
-          </div>
-
-          <!-- Drizzle -->
-          <div
-            class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-          >
-            <p class="font-medium text-sm">Drizzle ORM</p>
-            <p class="text-xs text-muted-foreground">Type-safe SQL</p>
-          </div>
-
-          <!-- PostgreSQL -->
-          <div
-            class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-          >
-            <p class="font-medium text-sm">PostgreSQL</p>
-            <p class="text-xs text-muted-foreground">Database</p>
-          </div>
-
-          <!-- better-auth -->
-          <div
-            class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-          >
-            <p class="font-medium text-sm">better-auth</p>
-            <p class="text-xs text-muted-foreground">Authentication</p>
-          </div>
-
-          <!-- Resend -->
-          <div
-            class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-          >
-            <p class="font-medium text-sm">Resend</p>
-            <p class="text-xs text-muted-foreground">Email</p>
-          </div>
-
-          <!-- Tailwind -->
-          <div
-            class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
-          >
-            <p class="font-medium text-sm">Tailwind CSS</p>
-            <p class="text-xs text-muted-foreground">Styling</p>
-          </div>
+          {#each builtWith as item (item.name)}
+            <div
+              class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
+            >
+              <p class="font-medium text-sm">{item.name}</p>
+              <p class="text-xs text-muted-foreground">{item.description}</p>
+            </div>
+          {/each}
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Vault Showcase Section -->
   <section class="gradient-subtle py-24">
     <div class="container mx-auto px-4 max-w-6xl">
       <div class="grid md:grid-cols-2 gap-12 items-center">
@@ -403,29 +357,15 @@
           </ul>
           <Button href="/dashboard" size="lg">Try Vault Demo</Button>
         </div>
-        <div class="rounded-xl border bg-card p-8 shadow-lg">
-          <div class="space-y-4">
-            <div
-              class="h-48 rounded-lg bg-muted/50 flex items-center justify-center"
-            >
-              <div class="text-center">
-                <Folder class="size-12 text-muted-foreground mx-auto mb-2" />
-                <p class="text-sm text-muted-foreground">
-                  Vault Interface Preview
-                </p>
-              </div>
-            </div>
-            <p class="text-sm text-muted-foreground text-center">
-              Vault showcases file uploads, previews, renaming, deletion, and
-              workspace-level organization—all built on SvelteStack primitives.
-            </p>
-          </div>
+        <div
+          class="rounded-xl border bg-background/50 backdrop-blur shadow-2xl overflow-hidden ring-1 ring-white/10"
+        >
+          <img src="/preview.png" alt="Vault preview" class="w-full h-auto" />
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Footer -->
   <footer class="border-t py-12">
     <div class="container mx-auto px-4 max-w-7xl">
       <div class="flex flex-col md:flex-row items-center justify-between gap-4">

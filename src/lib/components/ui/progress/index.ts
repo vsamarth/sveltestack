@@ -5,4 +5,3 @@ import Progress, {
 } from "./progress.svelte";
 
 export { Progress, progressVariants, type ProgressVariant, type ProgressProps };
-

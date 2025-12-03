@@ -1,4 +1,4 @@
-import { SvelteMap, SvelteSet } from "svelte/reactivity";
+import { SvelteDate, SvelteMap, SvelteSet } from "svelte/reactivity";
 import type { File } from "$lib/server/db/schema";
 
 export type StoredFile = Pick<
@@ -108,9 +108,6 @@ export class FileManager {
     } catch (error) {
       this.pendingOperations.delete(fileId);
       throw error;
-    } finally {
-        if (this.pendingOperations.get(fileId)?.type === "delete") {
-        }
     }
     this.cleanupStaleOperations();
   }
@@ -184,7 +181,7 @@ export class FileManager {
         name: u.filename,
         size: u.size,
         type: u.contentType,
-        createdAt: new Date(),
+        createdAt: new SvelteDate(),
         status: u.status,
         progress: u.progress,
         error: u.error,

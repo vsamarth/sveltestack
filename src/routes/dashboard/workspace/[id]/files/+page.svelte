@@ -37,6 +37,7 @@
 
   // Reset optimistic state when workspace changes
   $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _ = data.workspace.id;
     return () => {
       fileManager.clearState();

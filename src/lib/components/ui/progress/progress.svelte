@@ -30,7 +30,9 @@
     },
   });
 
-  export type ProgressVariant = VariantProps<typeof progressVariants>["variant"];
+  export type ProgressVariant = VariantProps<
+    typeof progressVariants
+  >["variant"];
   export type ProgressProps = WithElementRef<HTMLAttributes<HTMLDivElement>> & {
     value?: number;
     max?: number;
@@ -65,13 +67,13 @@
 >
   {#if indeterminate}
     <div
-      class={cn(indicator(), "w-1/3 animate-[progress-indeterminate_1.5s_ease-in-out_infinite]")}
+      class={cn(
+        indicator(),
+        "w-1/3 animate-[progress-indeterminate_1.5s_ease-in-out_infinite]",
+      )}
     ></div>
   {:else}
-    <div
-      class={indicator()}
-      style="width: {percentage}%"
-    ></div>
+    <div class={indicator()} style="width: {percentage}%"></div>
   {/if}
 </div>
 
@@ -88,4 +90,3 @@
     }
   }
 </style>
-
