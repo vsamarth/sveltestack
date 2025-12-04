@@ -10,7 +10,7 @@ import { db } from "$lib/server/db";
 import { user } from "$lib/server/db/schema";
 import { getWorkspaceByName } from "$lib/server/db/workspace";
 import { createPendingFile, confirmFileUpload } from "$lib/server/db/file";
-import { initBucket, uploadFile } from "$lib/server/storage";
+import { uploadFile } from "$lib/server/storage";
 import { generateFileContent } from "../../../tests/fixtures/file-samples";
 import { FILE_SEEDS } from "../../../tests/fixtures/file-seeds";
 import { getUserByEmail } from "$lib/server/db/user";
@@ -18,10 +18,7 @@ import { WORKSPACE_CONFIG } from "../../../tests/fixtures/workspace-config";
 import { acceptInvite, createInvite } from "$lib/server/db/invite";
 
 async function seedDemoUserData(user: { id: string; email: string }) {
-  await initBucket();
-
   const personalWorkspace = await getWorkspaceByName("Personal", user.id);
-
   if (!personalWorkspace) {
     throw new Error("Personal workspace not found");
   }
