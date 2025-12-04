@@ -1,20 +1,9 @@
 <script lang="ts">
   import * as Avatar from "$lib/components/ui/avatar";
   import { Badge } from "$lib/components/ui/badge";
-  import {
-    FileIcon,
-    UserPlusIcon,
-    UserMinusIcon,
-    MailIcon,
-    MailCheckIcon,
-    MailXIcon,
-    PencilIcon,
-    Trash2Icon,
-    DownloadIcon,
-    FolderPlusIcon,
-    FolderPenIcon,
-  } from "@lucide/svelte";
+  import { Icon, type IconName } from "$lib/components/ui/icon";
   import type { WorkspaceActivityEventType } from "$lib/server/db/schema/activity";
+
 
   interface Activity {
     id: string;
@@ -35,19 +24,19 @@
     currentUserId,
   }: { activities: Activity[]; currentUserId: string } = $props();
 
-  const EVENT_ICONS: Record<WorkspaceActivityEventType, typeof FileIcon> = {
-    "workspace.created": FolderPlusIcon,
-    "workspace.renamed": FolderPenIcon,
-    "workspace.deleted": Trash2Icon,
-    "file.uploaded": FileIcon,
-    "file.renamed": PencilIcon,
-    "file.deleted": Trash2Icon,
-    "file.downloaded": DownloadIcon,
-    "member.added": UserPlusIcon,
-    "member.removed": UserMinusIcon,
-    "invite.sent": MailIcon,
-    "invite.accepted": MailCheckIcon,
-    "invite.cancelled": MailXIcon,
+  const EVENT_ICONS: Record<WorkspaceActivityEventType, IconName> = {
+    "workspace.created": "FolderPlus",
+    "workspace.renamed": "FolderPen",
+    "workspace.deleted": "Trash2",
+    "file.uploaded": "File",
+    "file.renamed": "Pencil",
+    "file.deleted": "Trash2",
+    "file.downloaded": "Download",
+    "member.added": "UserPlus",
+    "member.removed": "UserMinus",
+    "invite.sent": "Mail",
+    "invite.accepted": "MailCheck",
+    "invite.cancelled": "MailX",
   };
 
   const getInitials = (name: string) =>
@@ -69,7 +58,7 @@
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
-
+ 
   const getDateKey = (date: Date) => {
     const activityYear = date.getFullYear();
     const activityMonth = date.getMonth();
@@ -213,7 +202,7 @@
       <div class="space-y-4 pl-2">
         {#each groupActivities as activity (activity.id)}
           {@const isCurrentUser = activity.actorId === currentUserId}
-          {@const EventIcon = EVENT_ICONS[activity.eventType] ?? FileIcon}
+          {@const iconName = EVENT_ICONS[activity.eventType] ?? "File"}
           {@const iconColor = getIconColor(activity.eventType)}
           {@const desc = getDescription(activity, isCurrentUser)}
 
@@ -240,7 +229,7 @@
                 class="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5 shadow-sm"
               >
                 <div class="bg-muted/30 rounded-full p-1">
-                  <EventIcon class="size-3 {iconColor}" />
+                  <Icon {iconName} class="size-3 {iconColor}" />
                 </div>
               </div>
             </div>
