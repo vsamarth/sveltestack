@@ -1,11 +1,7 @@
-<script lang="ts" module>
-  import { icons } from "@lucide/svelte";
+<script lang="ts">
+  import { icons, type IconProps } from "@lucide/svelte";
 
   export type IconName = keyof typeof icons;
-</script>
-
-<script lang="ts">
-  import type { IconProps } from "@lucide/svelte";
 
   let { iconName, ...restProps }: IconProps & { iconName: IconName } = $props();
 
