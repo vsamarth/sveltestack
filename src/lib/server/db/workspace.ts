@@ -99,6 +99,15 @@ export async function getLastActiveWorkspace(userId: string) {
   return null;
 }
 
+export async function getWorkspaceByName(name: string, userId: string) {
+  return await db
+    .select()
+    .from(workspace)
+    .where(and(eq(workspace.name, name), eq(workspace.ownerId, userId)))
+    .limit(1)
+    .then((rows) => rows[0]);
+}
+
 export async function setLastActiveWorkspace(
   userId: string,
   workspaceId: string,

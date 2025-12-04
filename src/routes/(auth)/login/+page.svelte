@@ -7,8 +7,17 @@
   import type { SuperValidated } from "sveltekit-superforms";
   import type { z } from "zod";
   import { goto, invalidateAll } from "$app/navigation";
+  import { page } from "$app/state";
+  import { loginDemo } from "$lib/remote/actions.remote";
+  import { toast } from "svelte-sonner";
+  import { onMount } from "svelte";
 
   type LoginFormData = z.infer<typeof loginSchema>;
+
+  let isDemoLoading = $state(false);
+  let demoToastShown = $state(false);
+
+  const demoEnabled = $derived(page.data.demoEnabled ?? false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleLogin(form: SuperValidated<LoginFormData, any>) {
@@ -29,6 +38,35 @@
       setError(form, "password", getErrorMessage());
     }
   }
+
+  async function handleDemoLogin() {
+    if (isDemoLoading) return;
+    isDemoLoading = true;
+    try {
+      await loginDemo();
+      await invalidateAll();
+      await goto("/dashboard");
+    } catch (err) {
+      console.error("Demo login failed:", err);
+      toast.error("Failed to start demo. Please try again.");
+    } finally {
+      isDemoLoading = false;
+    }
+  }
+
+  onMount(() => {
+    if (demoEnabled && !demoToastShown) {
+      demoToastShown = true;
+      toast("Try the demo", {
+        description: "Explore all features without creating an account",
+        action: {
+          label: "Start Demo",
+          onClick: handleDemoLogin,
+        },
+        duration: 10000,
+      });
+    }
+  });
 </script>
 
 <svelte:head>

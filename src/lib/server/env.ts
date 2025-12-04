@@ -55,6 +55,11 @@ const envSchema = z.object({
     .string()
     .email("EMAIL_FROM must be a valid email address if provided")
     .optional(),
+  // Demo mode configuration (optional)
+  ENABLE_DEMO: z
+    .string()
+    .optional()
+    .transform((val) => !!val && val.toLowerCase() !== "false"),
 });
 
 /**

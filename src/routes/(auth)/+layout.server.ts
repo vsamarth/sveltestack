@@ -1,5 +1,6 @@
 import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types";
+import { env } from "$lib/server/env";
 
 const ALLOW_AUTHENTICATED_PATHS = new Set(["/reset-password"]);
 
@@ -8,5 +9,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
     throw redirect(303, "/dashboard");
   }
 
-  return {};
+  return {
+    demoEnabled: env.ENABLE_DEMO,
+  };
 };
