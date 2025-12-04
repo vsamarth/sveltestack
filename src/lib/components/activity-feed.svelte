@@ -4,7 +4,6 @@
   import { Icon, type IconName } from "$lib/components/ui/icon";
   import type { WorkspaceActivityEventType } from "$lib/server/db/schema/activity";
 
-
   interface Activity {
     id: string;
     workspaceId: string;
@@ -58,7 +57,7 @@
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
- 
+
   const getDateKey = (date: Date) => {
     const activityYear = date.getFullYear();
     const activityMonth = date.getMonth();
