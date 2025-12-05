@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { ulid } from "ulid";
 import { eq } from "drizzle-orm";
+import { consola } from "consola";
 
 import * as schema from "../src/lib/server/db/schema";
 import { hash } from "../src/lib/server/auth/hash";
@@ -47,9 +48,9 @@ interface CreatedUser {
 const findUser = (users: CreatedUser[], email: string) =>
   users.find((u) => u.email === email)!;
 
-async function ensureUser(
+const ensureUser = async (
   config: (typeof TEST_USERS)[keyof typeof TEST_USERS],
-): Promise<CreatedUser> {
+): Promise<CreatedUser> => {
   const {
     id,
     email,
@@ -100,13 +101,13 @@ async function ensureUser(
     emailVerified: user.emailVerified,
     workspaceId: workspace.id,
   };
-}
+};
 
-async function seedFile(
+const seedFile = async (
   workspaceId: string,
   ownerId: string,
   file: (typeof FILE_SEEDS)[string][number],
-) {
+) => {
   const extension = file.filename.split(".").pop() ?? "bin";
   const storageKey = `${ulid()}.${extension}`;
   await uploadFile(
@@ -122,25 +123,27 @@ async function seedFile(
     file.contentType,
   );
   return await confirmFileUpload(pending.id, ownerId);
-}
+};
 
-async function seedDatabase() {
-  console.log("🌱 Seeding database...");
+const seedDatabase = async () => {
+  consola.info("Seeding database...");
 
-  console.log("👤 Creating test users...");
+  consola.info("Creating test users...");
   const users = await Promise.all(Object.values(TEST_USERS).map(ensureUser));
-  console.log("✅ Test users created:");
+  consola.success("Test users created:");
   users.forEach((u) =>
-    console.log(
+    consola.log(
       `   - ${u.email} (${u.emailVerified ? "verified" : "unverified"})`,
     ),
   );
 
-  const verifiedUser = findUser(users, TEST_USERS.verified.email);
-  const memberUser = findUser(users, TEST_USERS.member.email);
-  const invitedUser = findUser(users, TEST_USERS.invited.email);
+  const [verifiedUser, memberUser, invitedUser] = [
+    findUser(users, TEST_USERS.verified.email),
+    findUser(users, TEST_USERS.member.email),
+    findUser(users, TEST_USERS.invited.email),
+  ];
 
-  console.log("📁 Creating workspace fixtures...");
+  consola.info("Creating workspace fixtures...");
   await initBucket();
 
   const workspaces = {
@@ -153,7 +156,6 @@ async function seedDatabase() {
     empty: await createWorkspace(WORKSPACE_CONFIG.empty.name, verifiedUser.id),
   };
 
-  // Demonstrate workspace rename
   await db
     .update(schema.workspace)
     .set({ name: WORKSPACE_CONFIG.personal.renameFrom })
@@ -164,7 +166,6 @@ async function seedDatabase() {
     verifiedUser.id,
   );
 
-  // Seed files
   const allFiles = (
     await Promise.all(
       Object.entries(FILE_SEEDS).map(([wsKey, files]) =>
@@ -181,7 +182,6 @@ async function seedDatabase() {
     )
   ).flat();
 
-  // Demonstrate file rename
   const fileToRename = allFiles.find((f) => f.filename === "meeting-notes.txt");
   if (fileToRename) {
     await db
@@ -191,7 +191,6 @@ async function seedDatabase() {
     await renameFile(fileToRename.id, "meeting-notes.txt", verifiedUser.id);
   }
 
-  // Add download activities
   await Promise.all(
     allFiles
       .slice(0, 2)
@@ -200,13 +199,11 @@ async function seedDatabase() {
       ),
   );
 
-  // Add members
   await Promise.all([
     addMember(workspaces.default.id, memberUser.id, verifiedUser.id),
     addMember(workspaces.team.id, memberUser.id, verifiedUser.id),
   ]);
 
-  // Create invites
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const invites = {
     pending: await createInvite(
@@ -232,7 +229,6 @@ async function seedDatabase() {
     ),
   };
 
-  // Mark accepted invite
   await db
     .update(schema.workspaceInvite)
     .set({ status: "accepted", acceptedAt: new Date() })
@@ -243,23 +239,21 @@ async function seedDatabase() {
     invites.accepted.id,
     INVITE_CONFIG.accepted.email,
   );
-
-  // Cancel invite
   await cancelInvite(invites.cancelled.id, verifiedUser.id);
 
-  console.log("✅ Workspace fixtures created:");
+  consola.success("Workspace fixtures created:");
   Object.entries(workspaces).forEach(([key, ws]) => {
     const name =
       key === "default"
         ? "Default workspace"
         : WORKSPACE_CONFIG[key as keyof typeof WORKSPACE_CONFIG]?.name || key;
-    console.log(`   - ${name} (${ws.id})`);
+    consola.log(`   - ${name} (${ws.id})`);
   });
-  console.log("✅ Database seeded successfully!");
-}
+  consola.success("Database seeded successfully!");
+};
 
-async function resetDatabase() {
-  console.log("🔄 Resetting database...");
+const resetDatabase = async () => {
+  consola.info("Resetting database...");
   await reset(db, {
     user: schema.user,
     session: schema.session,
@@ -272,41 +266,41 @@ async function resetDatabase() {
     workspaceMember: schema.workspaceMember,
     workspaceInvite: schema.workspaceInvite,
   });
-  console.log("✅ Database reset successfully!");
-}
+  consola.success("Database reset successfully!");
+};
 
-async function main() {
+const commands = {
+  seed: seedDatabase,
+  reset: resetDatabase,
+  "reset-seed": async () => {
+    await resetDatabase();
+    await seedDatabase();
+  },
+};
+
+const main = async () => {
   if (process.env.NODE_ENV === "production" && process.env.FORCE !== "true") {
-    console.error("❌ Cannot run seed/reset in production without FORCE=true");
+    consola.error("Cannot run seed/reset in production without FORCE=true");
     process.exit(1);
   }
 
   try {
-    switch (command) {
-      case "seed":
-        await seedDatabase();
-        break;
-      case "reset":
-        await resetDatabase();
-        break;
-      case "reset-seed":
-        await resetDatabase();
-        await seedDatabase();
-        break;
-      default:
-        console.log("Usage: tsx scripts/seed.ts [seed|reset|reset-seed]");
-        console.log("\nCommands:");
-        console.log("  seed        - Seed the database with sample data");
-        console.log("  reset       - Reset (truncate) all tables");
-        console.log("  reset-seed  - Reset and then seed the database");
-        process.exit(1);
+    const handler = commands[command as keyof typeof commands];
+    if (!handler) {
+      consola.log("Usage: tsx scripts/seed.ts [seed|reset|reset-seed]");
+      consola.log("\nCommands:");
+      consola.log("  seed        - Seed the database with sample data");
+      consola.log("  reset       - Reset (truncate) all tables");
+      consola.log("  reset-seed  - Reset and then seed the database");
+      process.exit(1);
     }
+    await handler();
   } catch (error) {
-    console.error("❌ Error:", error);
+    consola.error("Error:", error);
     process.exit(1);
   } finally {
     await pool.end();
   }
-}
+};
 
 main();
