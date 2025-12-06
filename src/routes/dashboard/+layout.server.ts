@@ -27,7 +27,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   const percentage = total > 0 ? (used / total) * 100 : 0;
 
   return {
-    user: locals.user,
+    user: { ...locals.user, plan },
     ownedWorkspaces,
     memberWorkspaces,
     workspaceForm: await superValidate(zod4(workspaceSchema)),

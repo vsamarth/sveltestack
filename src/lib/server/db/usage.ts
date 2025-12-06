@@ -64,7 +64,7 @@ export async function checkStorageLimit(
 
   const totalAfter = currentUsage + additionalBytesNum;
 
-  if (totalAfter > limit) {
+  if (totalAfter >= limit) {
     throw new UsageLimitExceededError(
       `Storage limit exceeded. You're using ${formatBytes(currentUsage)} of ${formatBytes(limit)}. Upgrade to Pro for more space.`,
       "storage",
