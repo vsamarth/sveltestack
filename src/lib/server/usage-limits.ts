@@ -13,12 +13,15 @@ export const PLAN_LIMITS = {
     maxFileSizeBytes: 100 * 1024 * 1024, // 100 MB
     allowsInvites: true,
   },
-} as const satisfies Record<UserPlan, {
-  storageBytes: number;
-  maxWorkspaces: number;
-  maxFileSizeBytes: number;
-  allowsInvites: boolean;
-}>;
+} as const satisfies Record<
+  UserPlan,
+  {
+    storageBytes: number;
+    maxWorkspaces: number;
+    maxFileSizeBytes: number;
+    allowsInvites: boolean;
+  }
+>;
 
 export class UsageLimitExceededError extends Error {
   constructor(
@@ -35,7 +38,7 @@ export class UsageLimitExceededError extends Error {
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
-

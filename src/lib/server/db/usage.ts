@@ -2,12 +2,14 @@ import { db } from ".";
 import { eq, sql } from "drizzle-orm";
 import { user, workspace } from "./schema";
 import { workspaceActivity } from "./schema";
-import { PLAN_LIMITS, UsageLimitExceededError, formatBytes } from "../usage-limits";
+import {
+  PLAN_LIMITS,
+  UsageLimitExceededError,
+  formatBytes,
+} from "../usage-limits";
 import type { UserPlan } from "./schema/auth";
+import { getUserStorageUsage, refreshUserUsage } from "./user-usage";
 
-/**
- * Get user's plan from the user table
- */
 export async function getUserPlan(userId: string): Promise<UserPlan> {
   const result = await db
     .select({ plan: user.plan })
@@ -19,10 +21,6 @@ export async function getUserPlan(userId: string): Promise<UserPlan> {
   return result?.plan ?? "free";
 }
 
-/**
- * Get current storage usage for a user (computed from activity logs)
- * Aggregates file.uploaded and file.deleted events from workspaces owned by the user
- */
 export async function getStorageUsage(userId: string): Promise<number> {
   const result = await db
     .select({
@@ -44,9 +42,6 @@ export async function getStorageUsage(userId: string): Promise<number> {
   return result?.total ?? 0;
 }
 
-/**
- * Get workspace count for a user (simple COUNT query)
- */
 export async function getWorkspaceCount(userId: string): Promise<number> {
   const result = await db
     .select({ count: sql<number>`count(*)` })
@@ -57,18 +52,19 @@ export async function getWorkspaceCount(userId: string): Promise<number> {
   return result?.count ?? 0;
 }
 
-/**
- * Check if adding bytes would exceed storage limit
- */
 export async function checkStorageLimit(
   userId: string,
   additionalBytes: number,
 ): Promise<void> {
   const plan = await getUserPlan(userId);
-  const currentUsage = await getStorageUsage(userId);
+  await refreshUserUsage();
+  const currentUsage = Number(await getUserStorageUsage(userId));
   const limit = PLAN_LIMITS[plan].storageBytes;
+  const additionalBytesNum = Number(additionalBytes);
 
-  if (currentUsage + additionalBytes > limit) {
+  const totalAfter = currentUsage + additionalBytesNum;
+
+  if (totalAfter > limit) {
     throw new UsageLimitExceededError(
       `Storage limit exceeded. You're using ${formatBytes(currentUsage)} of ${formatBytes(limit)}. Upgrade to Pro for more space.`,
       "storage",
@@ -78,9 +74,6 @@ export async function checkStorageLimit(
   }
 }
 
-/**
- * Check if file size is allowed for the plan
- */
 export function checkFileSizeLimit(plan: UserPlan, fileSize: number): void {
   const limit = PLAN_LIMITS[plan].maxFileSizeBytes;
 
@@ -94,9 +87,6 @@ export function checkFileSizeLimit(plan: UserPlan, fileSize: number): void {
   }
 }
 
-/**
- * Check if user can create another workspace
- */
 export async function checkWorkspaceLimit(
   plan: UserPlan,
   currentCount: number,
@@ -113,9 +103,6 @@ export async function checkWorkspaceLimit(
   }
 }
 
-/**
- * Check if invites are allowed for the plan
- */
 export function checkInviteAllowed(plan: UserPlan): void {
   if (!PLAN_LIMITS[plan].allowsInvites) {
     throw new UsageLimitExceededError(
@@ -124,4 +111,3 @@ export function checkInviteAllowed(plan: UserPlan): void {
     );
   }
 }
-

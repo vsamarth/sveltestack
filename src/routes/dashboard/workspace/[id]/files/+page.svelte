@@ -48,7 +48,7 @@
     const instance = new Uppy({
       autoProceed: true,
       restrictions: {
-        maxFileSize: 10 * 1024 * 1024, // 10MB
+        maxFileSize: data.maxFileSize,
         maxNumberOfFiles: 5,
       },
     }).use(AwsS3, {
@@ -74,7 +74,35 @@
           };
         } catch (error) {
           console.error("Failed to get upload URL:", error);
-          throw new Error("Failed to get upload URL");
+
+          let errorMessage = "Failed to get upload URL";
+
+          if (error && typeof error === "object") {
+            if ("body" in error) {
+              const body = (error as { body?: unknown }).body;
+              if (body && typeof body === "object" && "message" in body) {
+                errorMessage = String((body as { message: unknown }).message);
+              } else if (typeof body === "string") {
+                errorMessage = body;
+              }
+            } else if ("message" in error) {
+              errorMessage = String((error as { message: unknown }).message);
+            }
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+
+          if (file) {
+            fileManager.updateUpload(file.id, {
+              status: "error",
+              error: errorMessage,
+            });
+            toast.error("Upload failed", {
+              description: errorMessage,
+            });
+          }
+
+          throw new Error(errorMessage);
         }
       },
     });

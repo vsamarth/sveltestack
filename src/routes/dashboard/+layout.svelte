@@ -12,6 +12,7 @@
     memberWorkspaces={data.memberWorkspaces}
     user={{ ...data.user, image: data.user.image ?? null }}
     workspaceForm={data.workspaceForm}
+    storageUsage={data.storageUsage}
   />
   <Sidebar.Inset class="p-12">
     {#if !data.user.emailVerified}

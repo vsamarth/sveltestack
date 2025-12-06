@@ -26,4 +26,3 @@ export const userUsage = pgMaterializedView("user_usage").as((qb) => {
 
 // Export types
 export type UserUsage = typeof userUsage.$inferSelect;
-

@@ -15,6 +15,7 @@
   import { page } from "$app/state";
   import NavUser from "./nav-user.svelte";
   import WorkspaceFormDialog from "./workspace-form-dialog.svelte";
+  import StorageIndicator from "./storage-indicator.svelte";
   import type { SuperValidated } from "sveltekit-superforms";
   import type { WorkspaceSchema } from "$lib/validation";
 
@@ -23,6 +24,12 @@
     memberWorkspaces?: Workspace[];
     user: User;
     workspaceForm?: SuperValidated<WorkspaceSchema>;
+    storageUsage?: {
+      used: number;
+      total: number;
+      plan: "free" | "pro";
+      percentage: number;
+    };
   };
 
   let {
@@ -30,6 +37,7 @@
     memberWorkspaces = [],
     user,
     workspaceForm,
+    storageUsage,
     ref = $bindable(null),
     ...restProps
   }: Props = $props();
@@ -246,6 +254,14 @@
     {/if}
   </Sidebar.Content>
   <Sidebar.Footer>
+    {#if storageUsage}
+      <StorageIndicator
+        used={storageUsage.used}
+        total={storageUsage.total}
+        plan={storageUsage.plan}
+        percentage={storageUsage.percentage}
+      />
+    {/if}
     <NavUser {user} />
   </Sidebar.Footer>
   <Sidebar.Rail />
