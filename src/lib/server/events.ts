@@ -1,4 +1,5 @@
 import * as activity from "./db/activity";
+import { refreshUserUsage } from "./db/user-usage";
 
 /**
  * This file serves as a central hub for application events in a hope to decouple database operations with side effects like logging.
@@ -37,6 +38,7 @@ export async function onFileUploaded(
     size,
     contentType,
   );
+  await refreshUserUsage();
 }
 
 export async function onFileRenamed(
@@ -62,6 +64,7 @@ export async function onFileDeleted(
   filename: string,
 ) {
   await activity.logFileDeleted(workspaceId, actorId, fileId, filename);
+  await refreshUserUsage();
 }
 
 export async function onFileDownloaded(
