@@ -6,6 +6,7 @@ export * from "./user-preferences";
 export * from "./membership";
 export * from "./invite";
 export * from "./activity";
+export * from "./user-usage";
 
 // Import tables for relations
 import { user, account, session } from "./auth";

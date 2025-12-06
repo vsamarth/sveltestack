@@ -10,6 +10,12 @@ import {
   getFileById,
 } from "$lib/server/db/file";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
+import {
+  checkStorageLimit,
+  checkFileSizeLimit,
+  getUserPlan,
+} from "$lib/server/db/usage";
+import { UsageLimitExceededError } from "$lib/server/usage-limits";
 
 export const getPresignedUploadUrlRemote = command(
   z.object({
@@ -29,20 +35,32 @@ export const getPresignedUploadUrlRemote = command(
       error(400, "Filename and workspaceId are required");
     }
 
-    // Check if user has access to the workspace (owner or member)
     const hasAccess = await hasWorkspaceAccess(workspaceId, locals.user.id);
     if (!hasAccess) {
       error(403, "Forbidden");
     }
 
+    const plan = await getUserPlan(locals.user.id);
+    const fileSize = size || 0;
+
+    if (fileSize > 0) {
+      try {
+        checkFileSizeLimit(plan, fileSize);
+        await checkStorageLimit(locals.user.id, fileSize);
+      } catch (err) {
+        if (err instanceof UsageLimitExceededError) {
+          error(400, err.message);
+        }
+        throw err;
+      }
+    }
+
     console.log("Generating presigned URL for:", filename);
 
-    // Generate unique storage key
     const fileExtension = filename.split(".").pop();
     const storageKey = `${ulid()}.${fileExtension}`;
     const finalContentType = contentType || "application/octet-stream";
 
-    // Create pending file record in database
     const fileRecord = await createPendingFile(
       workspaceId,
       filename,
@@ -52,7 +70,6 @@ export const getPresignedUploadUrlRemote = command(
       dropTimestamp,
     );
 
-    // Generate presigned URL (valid for 1 hour)
     const url = await getPresignedUploadUrl(storageKey, finalContentType, 3600);
 
     console.log("Presigned URL generated:", url);
@@ -83,19 +100,16 @@ export const confirmUpload = command(
       error(400, "File ID is required");
     }
 
-    // Check if file exists and user has access
     const file = await getFileById(fileId);
     if (!file) {
       error(404, "File not found");
     }
 
-    // Verify user has access to the file's workspace (owner or member)
     const hasAccess = await verifyUserHasFileAccess(locals.user.id, fileId);
     if (!hasAccess) {
       error(403, "Forbidden");
     }
 
-    // Mark file as completed
     const updatedFile = await confirmFileUpload(fileId, locals.user.id);
 
     if (!updatedFile) {

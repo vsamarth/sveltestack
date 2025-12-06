@@ -8,6 +8,8 @@ import {
 import type { Actions, PageServerLoad } from "./$types";
 import { error, fail } from "@sveltejs/kit";
 import { hasWorkspaceAccess } from "$lib/server/db/membership";
+import { getUserPlan } from "$lib/server/db/usage";
+import { PLAN_LIMITS } from "$lib/server/usage-limits";
 
 export const load: PageServerLoad = async ({ locals, params }) => {
   if (!locals.user) {
@@ -26,12 +28,19 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     throw error(403, "Forbidden");
   }
 
-  const files = await getWorkspaceFiles(params.id);
+  const [files, plan] = await Promise.all([
+    getWorkspaceFiles(params.id),
+    getUserPlan(locals.user.id),
+  ]);
+
+  const maxFileSize = PLAN_LIMITS[plan].maxFileSizeBytes;
 
   return {
     workspace,
     files,
     isOwner: workspace.ownerId === locals.user.id,
+    plan,
+    maxFileSize,
   };
 };
 
