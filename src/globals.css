@@ -145,27 +145,35 @@
 
 @layer utilities {
   .gradient-hero {
-    background: linear-gradient(135deg,
-        oklch(0.99 0.01 250) 0%,
-        oklch(0.97 0.01 220) 100%);
+    background: linear-gradient(
+      135deg,
+      oklch(0.99 0.01 250) 0%,
+      oklch(0.97 0.01 220) 100%
+    );
   }
 
   .dark .gradient-hero {
-    background: linear-gradient(135deg,
-        oklch(0.20 0.035 280) 0%,
-        oklch(0.15 0.025 260) 100%);
+    background: linear-gradient(
+      135deg,
+      oklch(0.2 0.035 280) 0%,
+      oklch(0.15 0.025 260) 100%
+    );
   }
 
   .gradient-subtle {
-    background: linear-gradient(180deg,
-        oklch(1 0 0) 0%,
-        oklch(0.98 0.005 250) 100%);
+    background: linear-gradient(
+      180deg,
+      oklch(1 0 0) 0%,
+      oklch(0.98 0.005 250) 100%
+    );
   }
 
   .dark .gradient-subtle {
-    background: linear-gradient(180deg,
-        oklch(0.141 0.005 285.823) 0%,
-        oklch(0.18 0.03 270) 100%);
+    background: linear-gradient(
+      180deg,
+      oklch(0.141 0.005 285.823) 0%,
+      oklch(0.18 0.03 270) 100%
+    );
   }
 
   @keyframes fade-in-up {
