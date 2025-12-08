@@ -38,7 +38,7 @@
   <AlertCircleIcon class="mt-0.5" />
   <div class="flex-1">
     <AlertTitle class="font-semibold mb-0">Verify your email</AlertTitle>
-    <AlertDescription class="text-amber-800 mt-0 block">
+    <AlertDescription class="text-amber-800 mt-0 block dark:text-amber-100">
       We sent a verification link to <span class="font-semibold">{email}</span>.
       Check your inbox (and spam folder) to activate your account.
     </AlertDescription>
@@ -48,7 +48,7 @@
     size="sm"
     onclick={resendVerification}
     disabled={isResending}
-    class="ml-4 border-amber-700 text-amber-900 hover:bg-amber-100 hover:text-amber-900 shrink-0 bg-transparent self-center"
+    class="ml-4 border-amber-700 dark:border-amber-500 text-amber-900 dark:text-amber-100 hover:bg-amber-100 hover:dark:bg-amber-900/50 hover:text-amber-900 dark:hover:text-amber-100 shrink-0 bg-transparent self-center"
   >
     {#if isResending}
       <Spinner class="size-4" />
