@@ -9,6 +9,10 @@
   import CreditCardIcon from "@lucide/svelte/icons/credit-card";
   import LogOutIcon from "@lucide/svelte/icons/log-out";
   import SparklesIcon from "@lucide/svelte/icons/sparkles";
+  import SunIcon from "@lucide/svelte/icons/sun";
+  import MoonIcon from "@lucide/svelte/icons/moon";
+  import LaptopIcon from "@lucide/svelte/icons/laptop";
+  import { setMode } from "mode-watcher";
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
   import type { User } from "$lib/server/db/schema";
@@ -96,6 +100,34 @@
             <BellIcon />
             Notifications
           </DropdownMenu.Item>
+        </DropdownMenu.Group>
+        <DropdownMenu.Separator />
+        <DropdownMenu.Group>
+          <DropdownMenu.Sub>
+            <DropdownMenu.SubTrigger>
+              <SunIcon
+                class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+              />
+              <MoonIcon
+                class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+              />
+              <span>Theme</span>
+            </DropdownMenu.SubTrigger>
+            <DropdownMenu.SubContent>
+              <DropdownMenu.Item onclick={() => setMode("light")}>
+                <SunIcon />
+                <span>Light</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onclick={() => setMode("dark")}>
+                <MoonIcon />
+                <span>Dark</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onclick={() => setMode("system")}>
+                <LaptopIcon />
+                <span>System</span>
+              </DropdownMenu.Item>
+            </DropdownMenu.SubContent>
+          </DropdownMenu.Sub>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
         <DropdownMenu.Item onclick={handleLogout}>
