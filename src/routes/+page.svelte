@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
+  import ThemeToggle from "$lib/components/theme-toggle.svelte";
   import {
     Shield,
     UserPlus,
@@ -45,13 +46,16 @@
 <main class="min-h-screen">
   <section class="gradient-hero">
     <header class="container mx-auto px-4 py-6 max-w-7xl">
-      <div class="flex items-center gap-2">
-        <div
-          class="size-8 rounded-lg bg-foreground flex items-center justify-center"
-        >
-          <Sparkles class="size-5 text-background" />
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div
+            class="size-8 rounded-lg bg-foreground flex items-center justify-center"
+          >
+            <Sparkles class="size-5 text-background" />
+          </div>
+          <span class="text-xl font-semibold">SvelteStack</span>
         </div>
-        <span class="text-xl font-semibold">SvelteStack</span>
+        <ThemeToggle />
       </div>
     </header>
 
@@ -141,7 +145,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
-        class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
+        class="p-6 rounded-xl border bg-card hover:shadow-lg dark:hover:border-muted-foreground/50 transition-all duration-300"
       >
         <div
           class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4"
@@ -156,7 +160,7 @@
       </div>
 
       <div
-        class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
+        class="p-6 rounded-xl border bg-card hover:shadow-lg dark:hover:border-muted-foreground/50 transition-all duration-300"
       >
         <div
           class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4"
@@ -170,7 +174,7 @@
       </div>
 
       <div
-        class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
+        class="p-6 rounded-xl border bg-card hover:shadow-lg dark:hover:border-muted-foreground/50 transition-all duration-300"
       >
         <div
           class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4"
@@ -184,7 +188,7 @@
       </div>
 
       <div
-        class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
+        class="p-6 rounded-xl border bg-card hover:shadow-lg dark:hover:border-muted-foreground/50 transition-all duration-300"
       >
         <div
           class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4"
@@ -198,7 +202,7 @@
       </div>
 
       <div
-        class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
+        class="p-6 rounded-xl border bg-card hover:shadow-lg dark:hover:border-muted-foreground/50 transition-all duration-300"
       >
         <div
           class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4"
@@ -212,7 +216,7 @@
       </div>
 
       <div
-        class="p-6 rounded-xl border bg-card hover:shadow-lg transition-shadow duration-300"
+        class="p-6 rounded-xl border bg-card hover:shadow-lg dark:hover:border-muted-foreground/50 transition-all duration-300"
       >
         <div
           class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4"
@@ -282,7 +286,7 @@
         <div class="grid grid-cols-2 gap-3">
           {#each builtWith as item (item.name)}
             <div
-              class="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
+              class="p-4 rounded-xl border bg-card hover:shadow-md dark:hover:border-muted-foreground/50 transition-all"
             >
               <p class="font-medium text-sm">{item.name}</p>
               <p class="text-xs text-muted-foreground">{item.description}</p>
@@ -358,7 +362,7 @@
           <Button href="/dashboard" size="lg">Try Vault Demo</Button>
         </div>
         <div
-          class="rounded-xl border bg-background/50 backdrop-blur shadow-2xl overflow-hidden ring-1 ring-white/10"
+          class="rounded-xl border bg-background/50 backdrop-blur shadow-2xl dark:shadow-2xl overflow-hidden ring-1 ring-white/10"
         >
           <img src="/preview.png" alt="Vault preview" class="w-full h-auto" />
         </div>
